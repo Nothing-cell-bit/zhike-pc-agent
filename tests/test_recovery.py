@@ -1,5 +1,6 @@
 """Regression gates for the unfinished spec flows; no external model calls."""
 import asyncio
+from backend import config as ai_settings
 import json
 import sqlite3
 from pathlib import Path
@@ -98,8 +99,8 @@ def test_json_structure_repaired_only_once(monkeypatch):
         body = 'invalid JSON' if len(calls)==1 else '{"ok":true}'
         return httpx.Response(200,json={'choices':[{'message':{'content':body}}],'usage':{'total_tokens':5}})
     original=httpx.AsyncClient
-    monkeypatch.setattr(ai,'TEXT_BASE','https://model.test/v1')
-    monkeypatch.setattr(ai,'TEXT_KEY','test-token')
+    monkeypatch.setattr(ai_settings,'TEXT_BASE','https://model.test/v1')
+    monkeypatch.setattr(ai_settings,'TEXT_KEY','test-token')
     monkeypatch.setattr(ai.httpx,'AsyncClient',lambda **kwargs:original(transport=httpx.MockTransport(response)))
     result,usage=asyncio.run(ai.model_json('JSON',{}))
     assert result == {'ok':True}
@@ -113,8 +114,8 @@ def test_schema_structure_repair_is_bounded(monkeypatch):
         body = {} if len(calls)==1 else {'title':'标题','body':'正文'}
         return httpx.Response(200,json={'choices':[{'message':{'content':json.dumps(body)}}]})
     original=httpx.AsyncClient
-    monkeypatch.setattr(ai,'TEXT_BASE','https://model.test/v1')
-    monkeypatch.setattr(ai,'TEXT_KEY','test-token')
+    monkeypatch.setattr(ai_settings,'TEXT_BASE','https://model.test/v1')
+    monkeypatch.setattr(ai_settings,'TEXT_KEY','test-token')
     monkeypatch.setattr(ai.httpx,'AsyncClient',lambda **kwargs:original(transport=httpx.MockTransport(response)))
     result,_=asyncio.run(ai.model_json('JSON',{},schema=ai.GeneratedArticle))
     assert result['title']=='标题' and len(calls)==2

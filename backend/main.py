@@ -25,7 +25,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel,Field,field_validator
 from sqlalchemy import select,update,func
 from sqlalchemy.exc import IntegrityError
-from .config import ROOT,DATA,TEXT_BASE,TEXT_KEY,TEXT_MODEL,IMAGE_KEY,IMAGE_MODEL
+from .config import ROOT,DATA,IMAGE_KEY,IMAGE_MODEL
+from . import model_settings
 from .db import *
 from .knowledge import knowledge,import_zip,work_images
 from .ima import connection_status
@@ -719,15 +720,36 @@ def status(u=Depends(admin)):
     with Session() as s:
         image_job=s.scalar(select(Job).where(Job.kind=='image').order_by(Job.created_at.desc()).limit(1))
         image_error=image_job.error if image_job else ''
-    return {'text':{'configured':bool(TEXT_KEY and TEXT_BASE),'model':TEXT_MODEL},'image':{'configured':bool(IMAGE_KEY),'model':IMAGE_MODEL,'account':'NothingK','account_verified':False,'last_error':image_error},'knowledge':knowledge.status(),'marketing_knowledge':{'provider':MARKETING_SOURCE,**connection_status()},'backups':[p.name for p in sorted((DATA/'backups').glob('*.db'))]}
+    return {'text':model_settings.get_config().public(),'image':{'configured':bool(IMAGE_KEY),'model':IMAGE_MODEL,'account':'NothingK','account_verified':False,'last_error':image_error},'knowledge':knowledge.status(),'marketing_knowledge':{'provider':MARKETING_SOURCE,**connection_status()},'backups':[p.name for p in sorted((DATA/'backups').glob('*.db'))]}
+
+@app.get('/api/admin/text-model')
+def text_model(u=Depends(admin)):
+    return JSONResponse(model_settings.get_config().public(),headers={'Cache-Control':'no-store'})
+
+@app.put('/api/admin/text-model')
+async def save_text_model(request:Request,u=Depends(admin)):
+    try:
+        if len(await request.body())>16000:raise ValueError('模型配置内容过长')
+        body=await request.json()
+        result=await asyncio.to_thread(model_settings.save_config,body)
+    except ValueError as e:
+        # Never return a validation body, provider response or credential.
+        detail=str(e) if not isinstance(e,json.JSONDecodeError) else '模型配置格式无效'
+        raise HTTPException(400,detail) from None
+    except OSError:
+        raise HTTPException(500,'私有配置保存失败，请检查持久目录权限') from None
+    with Session() as s:audit(s,u.id,'update_text_model');s.commit()
+    return JSONResponse(result,headers={'Cache-Control':'no-store'})
+
+@app.delete('/api/admin/text-model')
+def reset_text_model(u=Depends(admin)):
+    result=model_settings.reset_config()
+    with Session() as s:audit(s,u.id,'reset_text_model');s.commit()
+    return JSONResponse(result,headers={'Cache-Control':'no-store'})
 
 @app.post('/api/admin/check-model')
 async def check_model(u=Depends(admin)):
-    if not TEXT_KEY:raise HTTPException(400,'未配置文本模型')
-    try:
-        async with httpx.AsyncClient(timeout=12,trust_env=False) as c:r=await c.get(TEXT_BASE+'/models',headers={'Authorization':'Bearer '+TEXT_KEY})
-        return {'ok':r.status_code==200 and any(x['id']==TEXT_MODEL for x in r.json().get('data',[])),'http_status':r.status_code}
-    except Exception:return {'ok':False,'message':'连接失败，请检查网络与服务配置'}
+    return await model_settings.check_config()
 
 @app.post('/api/admin/backup')
 def do_backup(u=Depends(admin)):

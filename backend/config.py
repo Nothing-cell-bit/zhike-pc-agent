@@ -9,7 +9,7 @@ DATA = Path(os.environ.get('STORE_DATA_DIR', str(ROOT / 'data'))).resolve()
 DATA.mkdir(parents=True, exist_ok=True)
 TEXT_BASE = os.getenv('TEXT_API_BASE', '').rstrip('/')
 TEXT_KEY = os.getenv('TEXT_API_KEY', '')
-TEXT_MODEL = 'qwen3.8-27b'
+TEXT_MODEL = os.getenv('TEXT_MODEL', 'qwen3.8-27b')
 IMAGE_BASE = os.getenv('MODELSCOPE_IMAGE_BASE_URL', 'https://api-inference.modelscope.cn/v1').rstrip('/')
 IMAGE_KEY = os.getenv('MODELSCOPE_IMAGE_API_KEY', '')
 IMAGE_MODEL = os.getenv('MODELSCOPE_IMAGE_MODEL', 'Qwen/Qwen-Image-2.1-Turbo')

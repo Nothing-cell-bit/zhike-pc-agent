@@ -2,7 +2,7 @@
 
 **比比拉布团队｜华为·产业进阶赛道参赛作品**
 
-> **云端已上线，仍有运行限制。** 已验证浏览器登录、文本模型连通和一次带图回退生成；该稿件标记为本地来源、需要审核。服务依赖本机认证网关与 Cloudflare 临时隧道持续运行，长期稳定性和完整比赛任务矩阵仍需验证。入口：[网站](https://nothingk-zhike-pc-agent.ms.show/) · [客服工作台](https://nothingk-zhike-pc-agent.ms.show/staff)；详情见 [部署说明](docs/competition/DEPLOYMENT.md)。
+> **云端已上线，仍有运行限制。** 已验证浏览器登录、文本模型连通和一次带图回退生成；该稿件标记为本地来源、需要审核。默认文本模型依赖本机认证网关与 Cloudflare 临时隧道；管理员可在「管理设置 → 服务连接 → 语言模型」自行配置公网模型 API，保存后立即生效，切换后文本调用不再依赖个人电脑，长期稳定性和完整比赛任务矩阵仍需验证。入口：[网站](https://nothingk-zhike-pc-agent.ms.show/) · [客服工作台](https://nothingk-zhike-pc-agent.ms.show/staff)；详情见 [部署说明](docs/competition/DEPLOYMENT.md)。
 
 把顾客的购机需求，转成有来源、可修改、可核验的门店营销图文。知客提供客户接待、场景策略、图文创作、独立核验与导出；当前为本地比赛原型，营销生成已支持 ima 优先、调用失败时本地兜底。
 

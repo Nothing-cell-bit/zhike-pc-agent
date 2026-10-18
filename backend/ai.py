@@ -7,7 +7,8 @@ from typing import Literal
 import httpx
 from pydantic import BaseModel, Field, field_validator, model_validator, ValidationError
 from sqlalchemy import select,update
-from .config import TEXT_BASE,TEXT_KEY,TEXT_MODEL,MARKETING_SOURCE
+from .config import MARKETING_SOURCE
+from .model_settings import get_config,completion
 from .ima import ima,load_snapshot,LIBRARY_NAME
 from .db import Session,Job,Conversation,Message,Work,WorkVersion,Audit,now
 from .knowledge import knowledge
@@ -104,20 +105,24 @@ class VerificationResult(BaseModel):
     claims: list[Claim]
 
 async def model_json(instruction,data,max_tokens=2400,schema=None,system_prompt=None):
-    if not TEXT_BASE or not TEXT_KEY:raise ValueError('文本模型尚未配置，请配置服务端环境')
-    payload={'model':TEXT_MODEL,'messages':[{'role':'system','content':(SYSTEM if system_prompt is None else system_prompt)+'\n'+instruction},{'role':'user','content':json.dumps(data,ensure_ascii=False)}],'temperature':0.25,'max_tokens':max_tokens,'stream':False,'chat_template_kwargs':{'enable_thinking':False},'response_format':{'type':'json_object'}}
-    network_retry=0; repair=0; usage={}
+    settings=get_config()
+    if not settings.base or not settings.key:raise ValueError('文本模型尚未配置，请管理员在管理设置中配置')
+    payload={'model':settings.model,'messages':[{'role':'system','content':(SYSTEM if system_prompt is None else system_prompt)+'\n'+instruction},{'role':'user','content':json.dumps(data,ensure_ascii=False)}],'temperature':0.25,'max_tokens':max_tokens,'stream':False}
+    if settings.source=='environment' and settings.model.lower().startswith('qwen'):
+        payload['chat_template_kwargs']={'enable_thinking':False}
+        payload['response_format']={'type':'json_object'}
+    network_retry=0; repair=0; usage={'model':settings.model}
     if schema:
         payload['messages'][0]['content']+='\nJSON schema: '+json.dumps(schema.model_json_schema(),ensure_ascii=False)
     while True:
         try:
-            async with httpx.AsyncClient(timeout=httpx.Timeout(100,connect=8),trust_env=False) as c:
-                r=await c.post(TEXT_BASE+'/chat/completions',headers={'Authorization':'Bearer '+TEXT_KEY},json=payload)
+            r=await completion(settings,payload)
             if r.status_code>=500 and network_retry==0:
                 network_retry+=1;await asyncio.sleep(1);continue
             if r.status_code==401:raise ValueError('文本模型鉴权失败')
             if r.status_code==429:raise ValueError('文本模型繁忙，请稍后重试')
-            r.raise_for_status();o=r.json();choice=o['choices'][0]
+            if r.status_code!=200:raise ValueError('文本模型请求失败，请检查基础地址、模型名称和服务状态')
+            o=r.json();choice=o['choices'][0]
             for key,value in o.get('usage',{}).items():
                 if isinstance(value,(int,float)):usage[key]=usage.get(key,0)+value
             if choice.get('finish_reason')=='length':raise ValueError('模型输出达到上限，请缩短任务后重试')
@@ -310,7 +315,7 @@ async def verify(content,brief):
     if not rule['min']<=len(images)<=rule['max']:issues.append({'type':'配图','text':f'该平台要求{rule["min"]}～{rule["max"]}张图，当前{len(images)}张。'})
     if len({i.get('id') for i in images})!=len(images):issues.append({'type':'配图','text':'配图重复，不能重复使用同一图片充当多张配图。'})
     if any(i.get('id') not in allowed for i in images):issues.append({'type':'图片型号','text':'配图不属于当前产品知识索引。'})
-    result,_=await model_json('你执行独立核验，不改写成稿。检查完整成稿的每个产品事实、数字、限制、型号、虚构体验与承诺，并检查资料是否存在冲突。不要仅检查claims，必须检查正文。不把图片描述当性能证据。不把不涉及参数的正常生活场景当虚构体验。只返回issues:[{type:事实/合规/资料冲突,text:具体问题及原因}]，pending:[阻碍当前成稿的未证实信息]，claims:[{text:当前文稿中的具体产品事实,source_id:给定证据ID}]。请从当前正文重新提取事实，不沿用旧版。没有问题返回空数组；不因缺少未使用的参数而报错。也检查平台结构，海报最多三个卖点，小红书不可虚构体验。选购核对提醒本身不等于兼容性承诺；只对当前文稿实际使用但缺乏依据的结论提出问题，不因未列举无关参数或所有接口而报错。每个问题简洁具体，避免重复解释；事实点可合并同一组参数。',{'content':{k:v for k,v in content.items() if k not in ['sources','usage','claims']},'platform':brief['platform'],'rule':rule,'product':p['name'],'evidence':refs},3600,schema=VerificationResult)
+    result,verification_usage=await model_json('你执行独立核验，不改写成稿。检查完整成稿的每个产品事实、数字、限制、型号、虚构体验与承诺，并检查资料是否存在冲突。不要仅检查claims，必须检查正文。不把图片描述当性能证据。不把不涉及参数的正常生活场景当虚构体验。只返回issues:[{type:事实/合规/资料冲突,text:具体问题及原因}]，pending:[阻碍当前成稿的未证实信息]，claims:[{text:当前文稿中的具体产品事实,source_id:给定证据ID}]。请从当前正文重新提取事实，不沿用旧版。没有问题返回空数组；不因缺少未使用的参数而报错。也检查平台结构，海报最多三个卖点，小红书不可虚构体验。选购核对提醒本身不等于兼容性承诺；只对当前文稿实际使用但缺乏依据的结论提出问题，不因未列举无关参数或所有接口而报错。每个问题简洁具体，避免重复解释；事实点可合并同一组参数。',{'content':{k:v for k,v in content.items() if k not in ['sources','usage','claims']},'platform':brief['platform'],'rule':rule,'product':p['name'],'evidence':refs},3600,schema=VerificationResult)
     result=VerificationResult.model_validate(result).model_dump()
     for claim in result['claims']:
         if claim['source_id'] not in authoritative:issues.append({'type':'引用','text':'当前稿件存在未知事实来源：'+claim['text'][:120]})
@@ -319,7 +324,7 @@ async def verify(content,brief):
         if isinstance(issue,dict) and issue.get('text'):issues.append({'type':str(issue.get('type','事实')),'text':str(issue['text'])[:800]})
     pending=list(dict.fromkeys([*content.get('pending',[]),*result.get('pending',[])]))
     blocked=any(i['type']=='资料冲突' for i in issues)
-    return {'status':'passed' if not issues and not pending else 'needs_review','blocked':blocked,'issues':issues,'pending':pending,'checked_at':now(),'sources':list(authoritative),'image_count':len(images),'model':TEXT_MODEL,'claims':result['claims'],'prompt_version':PROMPT_VERSION,'source_version':refs[0]['version'],'source_type':content.get('source_type','local_zip'),'ima_verified':content.get('source_type')=='ima','fallback_reason':content.get('fallback_reason','')}
+    return {'status':'passed' if not issues and not pending else 'needs_review','blocked':blocked,'issues':issues,'pending':pending,'checked_at':now(),'sources':list(authoritative),'image_count':len(images),'model':(verification_usage.get('model') or get_config().model),'claims':result['claims'],'prompt_version':PROMPT_VERSION,'source_version':refs[0]['version'],'source_type':content.get('source_type','local_zip'),'ima_verified':content.get('source_type')=='ima','fallback_reason':content.get('fallback_reason','')}
 
 async def suggestions(cid,payload):
     with Session() as s:
