@@ -131,3 +131,13 @@ def test_unclaimed_public_chat_does_not_spend_model_quota(clients,monkeypatch):
         db.get(Conversation,cid).owner_id='staff';db.commit()
     asyncio.run(cloud.claimed_analysis(cid,'visitor'))
     assert calls==[(cid,'visitor')]
+
+
+def test_platform_forwarded_host_accepts_only_configured_public_origin(clients,monkeypatch):
+    monkeypatch.setenv('CLOUD_PUBLIC_ORIGIN','https://nothingk-zhike-pc-agent.ms.show')
+    with TestClient(cloud.CloudHeaders(app),base_url='https://internal-proxy') as client:
+        response=client.post('/api/auth/guest',json={'name':'访客'},headers={
+            'Origin':'https://nothingk-zhike-pc-agent.ms.show','X-Store-Request':'1'})
+        assert response.status_code==200
+        assert client.post('/api/auth/guest',json={'name':'访客'},headers={
+            'Origin':'https://unrelated.ms.show','X-Store-Request':'1'}).status_code==403
