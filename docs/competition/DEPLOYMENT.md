@@ -22,6 +22,8 @@
 
 云端适配器只允许 `https://modelscope.cn` 与 `https://www.modelscope.cn` 嵌入；保留原有同源校验和接口权限。会话 Cookie 使用 HttpOnly、Secure、SameSite=None 和 Partitioned，以适配跨站 iframe。可用直达应用地址访问 `/staff` 登录客服工作台。
 
+魔搭转发请求会改写 Host。`CLOUD_PUBLIC_ORIGIN` 配置该应用唯一的公开 HTTPS 域名，适配器只对与它完全一致的 Origin 规范化 Host；其他站点仍按原规则拒绝，不使用通配符放开跨站请求。
+
 ## 验证
 
 发布前检查 Docker 构建、前端页面、管理员登录、访客隔离、跨站拦截、实际 ima 检索、生成核验及数据目录。Docker 需要魔搭账号满足平台的阿里云绑定与实名条件；此条件由平台判断，不能由源码绕过。

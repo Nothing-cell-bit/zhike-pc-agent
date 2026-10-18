@@ -26,6 +26,14 @@ class CloudHeaders:
         self.app = app
 
     async def __call__(self, scope, receive, send):
+        if scope['type'] in {'http', 'websocket'}:
+            origin = dict(scope.get('headers', [])).get(b'origin', b'').decode('latin1')
+            public = os.getenv('CLOUD_PUBLIC_ORIGIN', '')
+            if origin == public and re.fullmatch(r'https://[a-zA-Z0-9.-]+', public):
+                # Studio changes Host before forwarding. Normalize only the exact configured origin.
+                headers = [(key, value) for key, value in scope['headers'] if key.lower() != b'host']
+                headers.append((b'host', public.removeprefix('https://').encode()))
+                scope = {**scope, 'headers': headers}
         async def secured(message):
             if message['type'] == 'http.response.start':
                 headers = []

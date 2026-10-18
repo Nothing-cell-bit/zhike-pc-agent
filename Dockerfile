@@ -13,5 +13,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY --from=frontend /src/frontend/dist ./frontend/dist/
 ENV PYTHONUNBUFFERED=1 STORE_DATA_DIR=/mnt/workspace/zhike COOKIE_SECURE=true MARKETING_KNOWLEDGE_SOURCE=ima
+ENV CLOUD_PUBLIC_ORIGIN=https://nothingk-zhike-pc-agent.ms.show
 EXPOSE 7860
 CMD ["python", "-m", "backend.cloud"]
