@@ -1,0 +1,13 @@
+{
+  "team": "比比拉布",
+  "stage": "初赛",
+  "github_url": "https://github.com/Nothing-cell-bit/zhike-pc-agent",
+  "modelscope_url": "https://modelscope.cn/studios/NothingK/zhike-pc-agent",
+  "description_url": "https://github.com/Nothing-cell-bit/zhike-pc-agent/blob/main/docs/competition/WORK_DESCRIPTION.md",
+  "submission_url": "",
+  "video_url": "",
+  "ima_evidence_reviewed": true,
+  "results_reviewed": true,
+  "public_access_reviewed": false,
+  "summary": "知客是面向华为 PC 门店的营销图文智能体，将客户需求、产品型号、场景和平台转成有来源、可修改、可核验的内容。自研 Agent 负责场景策略、同型号选图、事实核验、合规拦截与版本导出；大模型负责理解和表达。支持公众号、小红书、朋友圈和门店海报，配套客户接待与跟进。当前为可本地运行的原型，已实现 ima 优先与本地回退。新版三组真实结果经人工修订和重验后通过，其中两组使用 ima，一组回退本地；完整赛题对照和连续录屏待补齐。"
+}
