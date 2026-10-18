@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TOP_FILES = {
     'README.md', 'ACCEPTANCE.md', 'spec.md', '.gitignore', '.gitattributes',
     '.env.example', 'requirements.txt', 'requirements-dev.txt', '一键准备提交.cmd',
+    'Dockerfile', '.dockerignore',
 }
 PATTERNS = (
     'backend/*.py', 'backend/prompts/*.txt', 'tests/*.py', 'scripts/*.py',
