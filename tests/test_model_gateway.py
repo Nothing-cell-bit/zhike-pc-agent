@@ -40,3 +40,13 @@ def test_gateway_rejects_oversize_request_before_forwarding():
     with TestClient(create_app(CONFIG,transport=httpx.MockTransport(upstream))) as c:
         assert c.post('/v1/chat/completions',content=b'x'*250001,
             headers={'Authorization':'Bearer '+CONFIG['token']}).status_code==413
+
+
+def test_private_cache_transfer_requires_auth_and_never_accepts_arbitrary_path(tmp_path):
+    cache=tmp_path/'cache.zip';cache.write_bytes(b'approved-private-cache')
+    with TestClient(create_app({**CONFIG,'knowledge_cache':str(cache)})) as c:
+        assert c.get('/v1/knowledge-cache').status_code==401
+        r=c.get('/v1/knowledge-cache',headers={'Authorization':'Bearer '+CONFIG['token']})
+        assert r.content==b'approved-private-cache'
+        assert r.headers['cache-control']=='no-store'
+        assert c.get('/v1/knowledge-cache/other',headers={'Authorization':'Bearer '+CONFIG['token']}).status_code==404

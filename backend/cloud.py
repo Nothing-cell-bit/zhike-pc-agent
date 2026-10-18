@@ -166,6 +166,8 @@ async def discover_catalog():
 
 def bootstrap():
     ensure_admin()
+    from .cloud_cache import bootstrap_private_cache
+    bootstrap_private_cache()
     if not INDEX.exists():
         products = asyncio.run(asyncio.wait_for(discover_catalog(), timeout=150))
         write_catalog(INDEX, products)

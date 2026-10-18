@@ -8,7 +8,7 @@ from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, FileResponse
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -27,6 +27,12 @@ def create_app(config, transport=None):
         supplied = request.headers.get('authorization', '')
         if not secrets.compare_digest(supplied.encode(), ('Bearer '+config['token']).encode()):
             return JSONResponse({'detail':'需要有效网关凭证'}, 401)
+        if (request.method, path) == ('GET','knowledge-cache'):
+            cache = config.get('knowledge_cache')
+            if not cache or not Path(cache).is_file():
+                return JSONResponse({'detail':'未配置私有产品缓存'}, 404)
+            return FileResponse(cache, media_type='application/zip', filename='knowledge-cache.zip',
+                                headers={'Cache-Control':'no-store'})
         if (request.method, path) not in {('GET','models'), ('POST','chat/completions')}:
             return JSONResponse({'detail':'接口未开放'}, 404)
         now = time.monotonic()
