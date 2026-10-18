@@ -56,6 +56,15 @@ class SubmissionTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 release.scan(root, ['README.md'])
 
+    def test_cloud_runtime_secret_is_not_published(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            private = root / 'data/deployment/modelscope-runtime.json'
+            private.parent.mkdir(parents=True)
+            private.write_text(json.dumps({'TEXT_API_KEY':'private-cloud-runtime-token'}))
+            (root / 'README.md').write_text('private-cloud-runtime-token')
+            with self.assertRaises(ValueError):release.scan(root, ['README.md'])
+
     def test_missing_materials_cannot_be_declared_ready(self):
         result = release.blockers({'team': '比比拉布', 'stage': '初赛'})
         self.assertTrue(any('GitHub' in item for item in result))
