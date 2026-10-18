@@ -8,6 +8,9 @@ import sqlite3
 from contextlib import closing
 from pathlib import Path
 
+from .cloud_config import apply_private_environment
+apply_private_environment()
+
 from argon2 import PasswordHasher
 from sqlalchemy import select
 from .db import init_db, Session, User, Conversation

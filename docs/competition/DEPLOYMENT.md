@@ -6,6 +6,8 @@
 
 在魔搭「部署设置 → 密文管理」中设置 `TEXT_API_BASE`、`TEXT_API_KEY`、`IMA_OPENAPI_CLIENTID`、`IMA_OPENAPI_APIKEY`、`CLOUD_ADMIN_PASSWORD`。真实值只作为运行时私有变量，不进入 Git、Dockerfile、镜像构建参数、页面、PDF 或日志。
 
+本次部署将上述值作为 JSON 对象集中放在一个私有密文变量 `ZHIKE_PRIVATE_CONFIG` 中；入口只接受这些已列出的变量名，解析后移除 JSON 环境变量，不将内容写入日志。也支持逐项配置独立密文变量。两种方式均不得把真实值写入公开配置。
+
 `CLOUD_ADMIN_USERNAME` 默认 `admin`。首次启动创建管理员；已有管理员不会被覆盖、改密或重建。首次密码至少 16 位，应随机生成并仅在团队私有位置保存。
 
 ## 数据边界
