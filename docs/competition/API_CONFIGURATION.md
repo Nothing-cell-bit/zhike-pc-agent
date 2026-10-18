@@ -49,7 +49,7 @@ MARKETING_KNOWLEDGE_SOURCE=ima_first
 
 若需要调用云端背景生图，在 `.env` 中填写 `MODELSCOPE_IMAGE_API_KEY`。可选变量为 `MODELSCOPE_IMAGE_BASE_URL` 和 `MODELSCOPE_IMAGE_MODEL`，代码默认使用魔搭官方推理地址和 `Qwen/Qwen-Image-2.1-Turbo`。`MODELSCOPE_ACCOUNT=NothingK` 仅是显示标记，不等于凭证权限通过。
 
-比赛展示页本身不需要配置任何 API Key；本次发布的魔搭空间只有静态介绍。没有生图权限时，可以使用已有实图本地合成海报。Git 上传凭证与推理 API Token 的权限可能不同，不能把某一项成功当作另一项也可用。
+魔搭现已运行原网站，实际运行凭证仅配置在平台私有密文变量 ZHIKE_PRIVATE_CONFIG。文本模型使用经用户授权的临时认证隧道，详见 [部署说明](DEPLOYMENT.md)。没有生图权限时，可以使用已有实图本地合成海报。Git 上传凭证与推理 API Token 的权限可能不同，不能把某一项成功当作另一项也可用。
 
 ## 5. 生效顺序与验证
 

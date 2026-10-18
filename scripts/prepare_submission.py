@@ -8,7 +8,7 @@ import re
 import zipfile
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, quote
 
 ROOT = Path(__file__).resolve().parents[1]
 TOP_FILES = {
@@ -129,6 +129,8 @@ def build(root, out, config):
     links = ''.join('<a href="' + escape(config[key], quote=True) + '" target="_blank" rel="noopener">'
                     + label + '</a> ' for key, label in LABELS.items() if valid_url(config.get(key)))
     status = '待补齐 · 请先完成以下事项' if missing else '人工复核项已确认 · 请核对最终版本后提交'
+    manual = out.parent / 'pdf' / '比比拉布-知客-作品说明书.pdf'
+    pdf_link = ('<p><a href="../pdf/' + quote(manual.name) + '" download>下载作品说明书 PDF（可直接上传）</a></p>') if manual.is_file() else '<p>尚未生成可上传的说明书 PDF。</p>'
     page = '''<!doctype html><html lang="zh-CN"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>知客 · 提交准备台</title>
 <style>body{font:16px/1.8 system-ui;margin:40px auto;padding:0 24px;max-width:960px;color:#182c2a;background:#f4f7f5}
@@ -141,7 +143,7 @@ button{background:#17634c;color:white;border:0;border-radius:8px;padding:12px 20
 <p>此页面只整理材料，不会替你向组委会发送表单。链接和复核项在 docs/competition/submission.json 维护，修改后重新运行准备入口。</p></section>
 <section><h2>提交字段</h2><textarea id="fields" aria-label="提交字段" readonly>FIELDS</textarea>
 <p><button id="copy">一键复制全部字段</button> <span id="message" role="status"></span></p>LINKS</section>
-<section><h2>材料下载</h2><p><a href="zhike-source.zip" download>源码 ZIP</a><a href="submission-fields.txt" download>提交字段 TXT</a><a href="manifest.json">文件哈希与检查记录</a></p>
+<section><h2>材料下载</h2>PDFLINK<p><a href="zhike-source.zip" download>源码 ZIP</a><a href="submission-fields.txt" download>提交字段 TXT</a><a href="manifest.json">文件哈希与检查记录</a></p>
 <p>作品说明书、魔搭文案、录屏提纲及赛题对照表均在源码包的 docs/competition 目录。知识库原件、客户数据、凭证和私有案例册未打包。</p>
 <small>检查记录仅针对本次打包内容；自动扫描不能替代发布前人工审阅。未完成真实 ima 验收时不得声明符合全部赛题要求。</small></section>
 <script>document.getElementById('copy').onclick=async()=>{const t=document.getElementById('fields');
@@ -149,8 +151,8 @@ try{await navigator.clipboard.writeText(t.value);document.getElementById('messag
 catch(e){t.focus();t.select();document.getElementById('message').textContent='已全选，请按 Ctrl+C 复制';}};</script></html>'''
     # Replace markers once; user strings are always escaped and never executable.
     replacements = {'TEAM': escape(config.get('team', '待填写')), 'STATUS': status,
-                    'ISSUES': issues, 'FIELDS': escape(form), 'LINKS': links}
-    page = re.sub(r'TEAM|STATUS|ISSUES|FIELDS|LINKS', lambda match: replacements[match[0]], page)
+                    'ISSUES': issues, 'FIELDS': escape(form), 'LINKS': links, 'PDFLINK': pdf_link}
+    page = re.sub(r'TEAM|STATUS|ISSUES|FIELDS|LINKS|PDFLINK', lambda match: replacements[match[0]], page)
     (out / 'index.html').write_text(page, encoding='utf-8')
     return manifest
 
