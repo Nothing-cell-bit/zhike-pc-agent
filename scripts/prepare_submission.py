@@ -55,6 +55,15 @@ def scan(root, files, contents=None):
     for key, value in os.environ.items():
         if re.search(r'API_KEY|TOKEN|SECRET|PASSWORD|CLIENT_?ID|TEXT_API_BASE', key, re.I) and len(value) >= 12:
             secrets.append(value)
+    for name in ('modelscope-runtime.json', 'model-gateway.json'):
+        path = root / 'data/deployment' / name
+        if path.exists():
+            private = json.loads(path.read_text(encoding='utf-8-sig'))
+            for key, value in private.items():
+                if isinstance(value, str) and len(value) >= 8 and re.search(
+                    r'KEY|TOKEN|CLIENT_?ID|PASSWORD|API_BASE|UPSTREAM_URL', key, re.I
+                ):
+                    secrets.append(value)
     pattern = re.compile(r'(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}'
                          r'|sk-[A-Za-z0-9_-]{24,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)')
     for name in files:
