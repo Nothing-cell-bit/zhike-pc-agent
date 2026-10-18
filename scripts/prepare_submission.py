@@ -49,10 +49,10 @@ def scan(root, files, contents=None):
         for line in env_file.read_text(encoding='utf-8-sig').splitlines():
             key, sep, value = line.partition('=')
             value = value.strip().strip('\"\'')
-            if sep and re.search(r'KEY|TOKEN|SECRET|PASSWORD|CLIENT_?ID', key, re.I) and len(value) >= 8:
+            if sep and re.search(r'KEY|TOKEN|SECRET|PASSWORD|CLIENT_?ID|TEXT_API_BASE', key, re.I) and len(value) >= 8:
                 secrets.append(value)
     for key, value in os.environ.items():
-        if re.search(r'API_KEY|TOKEN|SECRET|PASSWORD|CLIENT_?ID', key, re.I) and len(value) >= 12:
+        if re.search(r'API_KEY|TOKEN|SECRET|PASSWORD|CLIENT_?ID|TEXT_API_BASE', key, re.I) and len(value) >= 12:
             secrets.append(value)
     pattern = re.compile(r'(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}'
                          r'|sk-[A-Za-z0-9_-]{24,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)')

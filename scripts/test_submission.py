@@ -47,6 +47,15 @@ class SubmissionTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 release.scan(root, ['README.md'])
 
+    def test_private_model_endpoint_is_not_published(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            endpoint = 'https://private-model.example.invalid/v1'
+            (root / '.env').write_text('TEXT_API_BASE=' + endpoint)
+            (root / 'README.md').write_text(endpoint)
+            with self.assertRaises(ValueError):
+                release.scan(root, ['README.md'])
+
     def test_missing_materials_cannot_be_declared_ready(self):
         result = release.blockers({'team': '比比拉布', 'stage': '初赛'})
         self.assertTrue(any('GitHub' in item for item in result))

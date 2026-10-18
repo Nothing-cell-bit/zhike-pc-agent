@@ -91,6 +91,8 @@ if (!(Test-Path .env)) { Copy-Item .env.example .env }
 
 ## 模型配置
 
+完整的文件位置、变量填写、优先级、知识源模式与验证步骤见 [模型与 ima API 配置手册](docs/competition/API_CONFIGURATION.md)。真实服务地址和凭证只存本机 `.env` / `.env.ima`，不上传仓库或魔搭展示页。
+
 文本服务使用 `TEXT_API_BASE`（包含 `/v1`）和 `TEXT_API_KEY`；模型固定为 `qwen3.8-27b`，无外部备用文本模型。没有配置时，任务显示失败原因，不生成模拟答案。
 
 魔搭使用 `MODELSCOPE_IMAGE_BASE_URL`、`MODELSCOPE_IMAGE_MODEL`、`MODELSCOPE_IMAGE_API_KEY`。默认模型 `Qwen/Qwen-Image-2.1-Turbo`。`NothingK` 只是待核对的账号标记，不能代替 Token，也不代表已验证归属。
