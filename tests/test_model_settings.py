@@ -76,3 +76,21 @@ def test_runtime_model_used_and_public_dns_pinned(clients, monkeypatch, tmp_path
     with pytest.raises(ValueError, match='公网'):
         asyncio.run(ai.model_json('JSON', {}))
     assert len(calls) == 2
+
+
+def test_qwen_non_thinking_is_optional_and_persisted(clients, monkeypatch, tmp_path):
+    from backend import model_settings as ms
+    monkeypatch.setattr(ms, 'CONFIG_PATH', tmp_path/'text-model.json')
+    monkeypatch.setattr(socket, 'getaddrinfo', lambda *a, **k: [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('93.184.216.34', 443))])
+    admin=clients[0]
+    value={**BODY,'model':'qwen3.8-27b','disable_thinking':True}
+    saved=admin.put('/api/admin/text-model',json=value,headers=HEADERS)
+    assert saved.status_code==200 and saved.json()['disable_thinking']
+    calls=[]
+    def respond(request):
+        calls.append(json.loads(request.content))
+        return httpx.Response(200,json={'choices':[{'message':{'content':'{"ok":true}'}}]})
+    original=httpx.AsyncClient
+    monkeypatch.setattr(httpx,'AsyncClient',lambda **kw:original(transport=httpx.MockTransport(respond)))
+    asyncio.run(ai.model_json('JSON',{}))
+    assert calls[0]['chat_template_kwargs']=={'enable_thinking':False}
