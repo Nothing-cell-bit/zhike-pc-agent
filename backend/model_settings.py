@@ -22,11 +22,12 @@ class ModelConfig:
     model: str
     key: str = field(repr=False)
     source: str = 'environment'
+    disable_thinking: bool = False
 
     def public(self):
         return {'base_url': self.base, 'model': self.model,
                 'key_configured': bool(self.key), 'configured': bool(self.base and self.key),
-                'source': self.source}
+                'source': self.source, 'disable_thinking': self.disable_thinking}
 
 
 def get_config():
@@ -34,10 +35,11 @@ def get_config():
         if CONFIG_PATH.exists():
             try:
                 value = json.loads(CONFIG_PATH.read_text(encoding='utf-8'))
-                return ModelConfig(value['base_url'], value['model'], value['api_key'], 'custom')
+                return ModelConfig(value['base_url'], value['model'], value['api_key'], 'custom', value.get('disable_thinking', False))
             except (ValueError, KeyError, OSError, TypeError):
                 raise ValueError('私有模型配置无法读取，请管理员重新保存配置') from None
-        return ModelConfig(config.TEXT_BASE, config.TEXT_MODEL, config.TEXT_KEY)
+        return ModelConfig(config.TEXT_BASE, config.TEXT_MODEL, config.TEXT_KEY,
+                           disable_thinking='qwen' in config.TEXT_MODEL.lower())
 
 
 def validate_base(value):
@@ -71,6 +73,9 @@ def save_config(value):
     base = validate_base(value.get('base_url'))
     model = value.get('model')
     key = value.get('api_key', '')
+    disable_thinking = value.get('disable_thinking', False)
+    if not isinstance(disable_thinking, bool):
+        raise ValueError('Qwen 思考模式开关必须为布尔值')
     if not isinstance(model, str) or not model.strip() or len(model) > 160 or any(ord(c) < 32 for c in model):
         raise ValueError('请填写有效模型名称（最多160个字符）')
     if not isinstance(key, str) or len(key) > 8192 or any(ord(c) < 32 for c in key):
@@ -85,12 +90,13 @@ def save_config(value):
             key = previous.key
         if not key:
             raise ValueError('首次配置必须填写 API Key')
-        result = ModelConfig(base, model.strip(), key, 'custom')
+        result = ModelConfig(base, model.strip(), key, 'custom', disable_thinking)
         CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         descriptor, temporary = tempfile.mkstemp(dir=CONFIG_PATH.parent, prefix='.text-model-')
         try:
             with os.fdopen(descriptor, 'w', encoding='utf-8') as stream:
-                json.dump({'base_url': result.base, 'model': result.model, 'api_key': result.key}, stream)
+                json.dump({'base_url': result.base, 'model': result.model, 'api_key': result.key,
+                           'disable_thinking': result.disable_thinking}, stream)
                 stream.flush()
                 os.fsync(stream.fileno())
             os.replace(temporary, CONFIG_PATH)
@@ -107,6 +113,9 @@ def reset_config():
 
 
 async def completion(settings, payload, timeout=100):
+    payload = dict(payload)
+    if settings.disable_thinking and 'qwen' in settings.model.lower():
+        payload['chat_template_kwargs'] = {'enable_thinking': False}
     url = httpx.URL(settings.base + '/chat/completions')
     headers = {'Authorization': 'Bearer ' + settings.key}
     extensions = {}
@@ -128,8 +137,6 @@ async def check_config():
         {'role': 'system', 'content': 'Return only a JSON object.'},
         {'role': 'user', 'content': 'Return {"ok":true}'}],
         'max_tokens': 64, 'stream': False}
-    if settings.source == 'environment' and settings.model.lower().startswith('qwen'):
-        payload['chat_template_kwargs'] = {'enable_thinking': False}
     try:
         response = await completion(settings, payload, timeout=20)
         if response.status_code != 200:

@@ -109,7 +109,6 @@ async def model_json(instruction,data,max_tokens=2400,schema=None,system_prompt=
     if not settings.base or not settings.key:raise ValueError('文本模型尚未配置，请管理员在管理设置中配置')
     payload={'model':settings.model,'messages':[{'role':'system','content':(SYSTEM if system_prompt is None else system_prompt)+'\n'+instruction},{'role':'user','content':json.dumps(data,ensure_ascii=False)}],'temperature':0.25,'max_tokens':max_tokens,'stream':False}
     if settings.source=='environment' and settings.model.lower().startswith('qwen'):
-        payload['chat_template_kwargs']={'enable_thinking':False}
         payload['response_format']={'type':'json_object'}
     network_retry=0; repair=0; usage={'model':settings.model}
     if schema:

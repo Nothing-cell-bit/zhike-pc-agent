@@ -16,7 +16,7 @@ it('管理员可保存配置，密钥不回填；保存后清除输入并提示�
  fireEvent.change(screen.getByLabelText('模型名称'),{target:{value:'new-model'}});
  fireEvent.change(key,{target:{value:'new-private-value'}});
  fireEvent.click(screen.getByRole('button',{name:'保存模型配置'}));
- await waitFor(()=>expect(api).toHaveBeenCalledWith('/admin/text-model','PUT',{base_url:current.base_url,model:'new-model',api_key:'new-private-value'}));
+ await waitFor(()=>expect(api).toHaveBeenCalledWith('/admin/text-model','PUT',{base_url:current.base_url,model:'new-model',api_key:'new-private-value',disable_thinking:false}));
  await waitFor(()=>expect(key.value).toBe(''));
  expect(screen.getByText(/保存成功，后续任务立即使用新配置/)).toBeTruthy();
 });
