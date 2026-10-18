@@ -38,7 +38,7 @@ def test_next_question_does_not_recollect_an_already_known_answer():
     assert result['software']['value']=='黑猴'
     assert result['next_question']['field']!='software'
 
-def test_review_repairs_missing_and_misclassified_draft_facts(clients,monkeypatch):
+def test_one_pass_receives_full_question_context_and_preserves_model_facts(clients,monkeypatch):
     _,_,customer,_=clients;cid=guest(customer)
     with Session() as s:
         c=s.get(Conversation,cid);c.seq=3
@@ -48,12 +48,12 @@ def test_review_repairs_missing_and_misclassified_draft_facts(clients,monkeypatc
     calls=[]
     async def model(instruction,data,*args,**kwargs):
         calls.append(data)
-        if len(calls)==1:return {'tasks':item('a','档案修复员')},{}
-        assert 'draft' in data
+        assert [(m['role'],m['text']) for m in data['messages']]==[
+            ('customer','我是档案修复员'),('staff','具体需要运行哪些应用？'),('customer','单位自研的甲乙丙系统')]
         return {'user':item('a','档案修复员'),'software':item('b','单位自研的甲乙丙系统')},{}
     monkeypatch.setattr(ai,'model_json',model)
     result=asyncio.run(ai.analysis(cid))['analysis']
-    assert len(calls)==2
+    assert len(calls)==1
     assert result['user']['value']=='档案修复员'
     assert result['tasks']['value']=='尚未了解'
     assert result['software']['value']=='单位自研的甲乙丙系统'
@@ -75,7 +75,7 @@ def test_staff_question_during_analysis_does_not_discard_customer_facts(clients,
     async def model(*args,**kwargs):
         nonlocal calls
         calls+=1
-        if calls==2:
+        if calls==1:
             with Session() as s:
                 c=s.get(Conversation,cid);c.seq=2
                 s.add(Message(conversation_id=cid,sender_id='staff',role='staff',content='预算是多少？',client_id='staff-during-review',seq=2));s.commit()

@@ -59,7 +59,7 @@ const {chromium}=require(path.join(process.env.PLAYWRIGHT_MODULES,'playwright'))
   assert.equal(await page.locator('article h1').innerText(),'测试：自动调整失败');
   await page.setViewportSize({width:390,height:844});
   await page.locator('.content-status').scrollIntoViewIfNeeded();
-  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth+1,{},{timeout:3000});
   await page.locator('.content-status').screenshot({path:path.join(out,'review-mobile.png')});
   assert.deepEqual(errors,[]);
   console.log('PASS: automatic repair, pending-only review, manual approval, formal export, edit invalidation, failure recovery, mobile layout');

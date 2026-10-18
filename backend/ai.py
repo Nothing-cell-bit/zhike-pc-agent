@@ -12,7 +12,7 @@ from .ima import ima,load_snapshot,LIBRARY_NAME
 from .db import Session,Job,Conversation,Message,Work,WorkVersion,Audit,now
 from .knowledge import knowledge
 from .marketing import PROMPT_VERSION, scenario_judgment, select_images, has_inline_images
-from .requirements import build_requirements,REQUIREMENT_PROMPT,REQUIREMENT_REVIEW_PROMPT,SCHEMA_VERSION
+from .requirements import build_requirements,REQUIREMENT_PROMPT,SCHEMA_VERSION
 
 text_lock=asyncio.Lock()
 analysis_timers={}
@@ -27,17 +27,22 @@ SYSTEM=(Path(__file__).parent/'prompts'/'marketing-system.txt').read_text(encodi
 class EvidenceQuote(BaseModel):
     message_id: str
     quote: str = Field(min_length=1,max_length=300)
+    kind: Literal['fact','context']='fact'
 
 class Insight(BaseModel):
-    value: str = ''
-    evidence: list[str] = Field(default_factory=list)
     quotes: list[EvidenceQuote] = Field(default_factory=list,max_length=6)
     status: Literal['known','partial','unknown']='unknown'
+    confirmed_none: bool=False
 
     @model_validator(mode='after')
     def consistent_status(self):
         if bool(self.quotes)!=(self.status!='unknown'):
             raise ValueError('known/partial必须有客户原话；unknown的quotes应为空')
+        facts=any(q.kind=='fact' for q in self.quotes)
+        if self.confirmed_none and (self.status!='known' or facts):
+            raise ValueError('明确无要求必须为known，且只能包含context证据')
+        if self.status!='unknown' and not facts and not self.confirmed_none:
+            raise ValueError('非空需求必须有fact内容，确认语不能独立成为需求')
         return self
 
 class NextQuestion(BaseModel):
@@ -53,8 +58,6 @@ class RequirementAnalysis(BaseModel):
     progress: Insight = Field(default_factory=Insight)
     concerns: Insight = Field(default_factory=Insight)
     next_step: Insight = Field(default_factory=Insight)
-    questions: list[str] = Field(default_factory=list)
-    summary: str = ''
     next_question: NextQuestion = Field(default_factory=NextQuestion)
     followup_allowed: bool = True
 
@@ -100,9 +103,9 @@ class VerificationResult(BaseModel):
     pending: list[str]
     claims: list[Claim]
 
-async def model_json(instruction,data,max_tokens=2400,schema=None):
+async def model_json(instruction,data,max_tokens=2400,schema=None,system_prompt=None):
     if not TEXT_BASE or not TEXT_KEY:raise ValueError('文本模型尚未配置，请配置服务端环境')
-    payload={'model':TEXT_MODEL,'messages':[{'role':'system','content':SYSTEM+'\n'+instruction},{'role':'user','content':json.dumps(data,ensure_ascii=False)}],'temperature':0.25,'max_tokens':max_tokens,'stream':False,'chat_template_kwargs':{'enable_thinking':False},'response_format':{'type':'json_object'}}
+    payload={'model':TEXT_MODEL,'messages':[{'role':'system','content':(SYSTEM if system_prompt is None else system_prompt)+'\n'+instruction},{'role':'user','content':json.dumps(data,ensure_ascii=False)}],'temperature':0.25,'max_tokens':max_tokens,'stream':False,'chat_template_kwargs':{'enable_thinking':False},'response_format':{'type':'json_object'}}
     network_retry=0; repair=0; usage={}
     if schema:
         payload['messages'][0]['content']+='\nJSON schema: '+json.dumps(schema.model_json_schema(),ensure_ascii=False)
@@ -147,8 +150,19 @@ def job_active(jid):
         return bool(job and job.status!='cancelled')
 
 def spawn_job(kind,actor,target='',payload=None):
+    payload=dict(payload or {})
     with Session() as s:
-        j=Job(kind=kind,actor_id=actor,target_id=target,payload=json.dumps(payload or {},ensure_ascii=False));s.add(j);s.commit();jid=j.id
+        if kind=='analysis':
+            # Manual refresh consumes the pending debounce; auto/manual share one
+            # in-flight inference for the same customer-message revision.
+            timer=analysis_timers.pop(target,None)
+            if timer and timer is not asyncio.current_task():timer.cancel()
+            latest=s.scalar(select(Message.seq).where(Message.conversation_id==target,Message.role=='customer').order_by(Message.seq.desc()).limit(1)) or 0
+            payload.update({'_analysis_seq':latest,'_analysis_schema':SCHEMA_VERSION})
+            for existing in s.scalars(select(Job).where(Job.kind=='analysis',Job.target_id==target,Job.status.in_(['queued','running'])).order_by(Job.created_at.desc())):
+                prior=json.loads(existing.payload)
+                if prior.get('_analysis_seq')==latest and prior.get('_analysis_schema')==SCHEMA_VERSION:return existing.id
+        j=Job(kind=kind,actor_id=actor,target_id=target,payload=json.dumps(payload,ensure_ascii=False));s.add(j);s.commit();jid=j.id
     asyncio.create_task(run_text_job(jid))
     return jid
 
@@ -165,12 +179,8 @@ async def delayed_analysis(cid,actor):
     analysis_timers[cid]=asyncio.create_task(later())
 
 async def extract_requirement_facts(messages):
-    """Shared live/evaluation path: semantic proposal followed by independent review."""
-    draft,usage=await model_json(REQUIREMENT_PROMPT,{'messages':messages},2200,schema=RequirementAnalysis)
-    draft=RequirementAnalysis.model_validate(draft).model_dump()
-    result,review_usage=await model_json(REQUIREMENT_REVIEW_PROMPT,{'messages':messages,'draft':draft},2600,schema=RequirementAnalysis)
-    for key,value in review_usage.items():
-        if isinstance(value,(int,float)):usage[key]=usage.get(key,0)+value
+    """One semantic inference; validate and project grounded facts locally."""
+    result,usage=await model_json(REQUIREMENT_PROMPT,{'messages':messages},2200,schema=RequirementAnalysis,system_prompt='')
     parsed=RequirementAnalysis.model_validate(result).model_dump()
     parsed['schema_version']=SCHEMA_VERSION
     return parsed,usage

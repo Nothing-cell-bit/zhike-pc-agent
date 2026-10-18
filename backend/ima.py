@@ -89,6 +89,7 @@ class ImaClient:
                 'ima-openapi-ctx':'skill_version=1.1.10','Content-Type':'application/json'})
             r.raise_for_status();result=r.json()
         except (httpx.HTTPError,ValueError):raise ValueError('ima 连接失败或响应无效，请稍后重试') from None
+        if not isinstance(result,dict):raise ValueError('ima 返回结构不完整')
         if result.get('code')==200002:raise ValueError('ima 凭证鉴权失败，请检查 Client ID 和 API Key 是否对应')
         if result.get('code')!=0:
             code=result.get('code') if isinstance(result.get('code'),int) else '未知'
@@ -147,8 +148,8 @@ class ImaProvider:
             result=await asyncio.wait_for(self._fetch(product,brief),timeout=150)
             save_json(CACHE_ROOT/'connection.json',{'connected':True,'last_success':timestamp(),'last_error':''})
             return result
-        except (ValueError,TimeoutError,KeyError,TypeError) as e:
-            reason='ima 检索超时' if isinstance(e,TimeoutError) else 'ima 返回结构不完整' if isinstance(e,(KeyError,TypeError)) else str(e)
+        except (ValueError,TimeoutError,KeyError,TypeError,AttributeError) as e:
+            reason='ima 检索超时' if isinstance(e,TimeoutError) else 'ima 返回结构不完整' if isinstance(e,(KeyError,TypeError,AttributeError)) else str(e)
             save_json(CACHE_ROOT/'connection.json',{'connected':False,'last_error':reason,'checked_at':timestamp()})
             raise ValueError(reason) from None
 

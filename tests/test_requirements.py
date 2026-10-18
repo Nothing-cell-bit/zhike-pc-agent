@@ -3,7 +3,7 @@ import json
 import pytest
 from backend import ai
 from backend.db import Session,Conversation,Message
-from backend.requirements import build_requirements,REQUIREMENT_FIELDS
+from backend.requirements import build_requirements,REQUIREMENT_FIELDS,SCHEMA_VERSION
 from .conftest import post
 from .test_workflow import guest
 
@@ -64,7 +64,7 @@ def test_customer_correction_replaces_old_budget_in_legacy_view():
 def test_api_exposes_reviewed_analysis_and_updates_manual_question(clients,monkeypatch):
     admin,staff,customer,_=clients;cid=guest(customer)
     with Session() as s:
-        c=s.get(Conversation,cid);c.seq=2;c.analysis_seq=2;c.analysis=json.dumps({'schema_version':3,'user':fact('m1','大二学生'),'budget':fact('m2','预算1w以内')})
+        c=s.get(Conversation,cid);c.seq=2;c.analysis_seq=2;c.analysis=json.dumps({'schema_version':SCHEMA_VERSION,'user':fact('m1','大二学生'),'budget':fact('m2','预算1w以内')})
         s.add_all([Message(id='m1',conversation_id=cid,sender_id=c.customer_id,role='customer',content='我是大二学生，想换一个新电脑',client_id='requirement-message-1',seq=1),Message(id='m2',conversation_id=cid,sender_id=c.customer_id,role='customer',content='预算1w以内',client_id='requirement-message-2',seq=2)]);s.commit()
     result=staff.get('/api/conversations/'+cid).json()
     assert result['analysis']['user']['value']=='大二学生'
@@ -93,7 +93,7 @@ def test_analysis_sends_field_boundaries_and_verbatim_quote_contract(clients,mon
     seen=[]
     async def model(instruction,data,*args,**kwargs):
         seen.append((instruction,data))
-        return {'user':fact('m','大二学生'),'budget':fact('m','预算1w以内'),**({'tasks':fact('m','大二学生')} if 'draft' not in data else {})},{}
+        return {'user':fact('m','大二学生'),'budget':fact('m','预算1w以内')},{}
     monkeypatch.setattr(ai,'model_json',model)
     result=asyncio.run(ai.analysis(cid))['analysis']
     assert result['tasks']['value']=='尚未了解'

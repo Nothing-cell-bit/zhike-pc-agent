@@ -133,9 +133,9 @@ def unified_markdown(content, brief, report, draft=False):
         parts.append(f'- {im["name"]}；位置：{im.get("position", "待确认")}；说明：{im.get("caption", im.get("description", "待确认"))}；来源：{im.get("source") or im.get("url") or "待确认"}；选图理由：{im.get("selection_reason", "历史稿件未记录")}')
     status = report.get('status', 'unchecked')
     parts += ['## 四、核验结果', '- 内容检查：'+{'passed':'通过', 'manual_passed':'人工已通过', 'needs_review':'需人工复核', 'unchecked':'待检查'}.get(status, status),
-              '- 产品事实：'+('已按所列'+(' ima 来源快照' if is_ima else '本地资料')+'核验' if status == 'passed' else '待核验或需修订'),
-              '- 图片型号：'+('同型号索引检查通过' if status == 'passed' else '待核验或需修订')+('；ima 原图来源已记录' if is_ima else '；本地图源'),
-              '- 合规：'+('本次检查未发现问题；仍需发布前复核' if status == 'passed' else '待核验或需修订')]
+              '- 产品事实：'+('已人工确认，系统原始检查记录见下方' if status=='manual_passed' else '已按所列'+(' ima 来源快照' if is_ima else '本地资料')+'核验' if status == 'passed' else '待核验或需修订'),
+              '- 图片型号：'+('已人工确认' if status=='manual_passed' else '同型号索引检查通过' if status == 'passed' else '待核验或需修订')+('；ima 原图来源已记录' if is_ima else '；本地图源'),
+              '- 合规：'+('已人工确认，系统原始检查记录见下方' if status=='manual_passed' else '本次检查未发现问题；仍需发布前复核' if status == 'passed' else '待核验或需修订')]
     if status=='manual_passed':
         approval=report.get('approval',{})
         parts += ['- 人工确认：'+approval.get('display_name','')+'；'+approval.get('approved_at',''),
