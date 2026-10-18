@@ -22,7 +22,7 @@ export function TextModelSettings({onSaved}:{onSaved:()=>void}){
  <label style={{display:'block',marginBottom:12}}><input type="checkbox" checked={disableThinking} disabled={busy} onChange={e=>setDisableThinking(e.target.checked)}/> 关闭 Qwen 思考模式（仅用于支持此参数的 Qwen 服务）</label>
  <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}><Button type="primary" htmlType="submit" disabled={busy}>保存模型配置</Button><Button disabled={busy} onClick={()=>void run(async()=>{const result=await api('/admin/check-model','POST');if(!result.ok)throw new Error(result.message||'连接未通过');setNotice(result.message||'模型连接正常');})}>测试当前已保存配置</Button></div>
  <p className="muted">当前来源：{saved.source==='custom'?'管理员自定义配置':'部署默认配置'}。测试会发送一次简短模型请求，可能消耗少量额度。</p>
- {saved.source==='custom'&&<>{confirmReset?<div><span>恢复部署默认配置并删除自定义密钥？</span><Button disabled={busy} onClick={()=>void run(async()=>{apply(await api<Settings>('/admin/text-model','DELETE'));setConfirmReset(false);setNotice('已恢复部署默认配置。');onSaved();})}>确认恢复默认</Button><Button onClick={()=>setConfirmReset(false)}>取消</Button></div>:<Button disabled={busy} onClick={()=>setConfirmReset(true)}>恢复部署默认配置</Button>}</>}
+ {saved.source==='custom'&&<>{confirmReset?<div><span>恢复部署默认配置并删除自定义密钥？</span><Button disabled={busy} onClick={()=>void run(async()=>{apply(await api<Settings>('/admin/text-model/reset','POST'));setConfirmReset(false);setNotice('已恢复部署默认配置。');onSaved();})}>确认恢复默认</Button><Button onClick={()=>setConfirmReset(false)}>取消</Button></div>:<Button disabled={busy} onClick={()=>setConfirmReset(true)}>恢复部署默认配置</Button>}</>}
  </form>}
  {busy&&<p role="status">正在处理，请稍候…</p>}{error&&<Alert role="alert" type="error" message={error} showIcon/>}{notice&&<Alert role="status" type="success" message={notice} showIcon/>}
  </div>;

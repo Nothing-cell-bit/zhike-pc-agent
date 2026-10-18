@@ -742,6 +742,7 @@ async def save_text_model(request:Request,u=Depends(admin)):
     return JSONResponse(result,headers={'Cache-Control':'no-store'})
 
 @app.delete('/api/admin/text-model')
+@app.post('/api/admin/text-model/reset')
 def reset_text_model(u=Depends(admin)):
     result=model_settings.reset_config()
     with Session() as s:audit(s,u.id,'reset_text_model');s.commit()
