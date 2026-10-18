@@ -37,7 +37,7 @@ def test_private_persistence_blank_key_and_reset(clients, monkeypatch, tmp_path)
     assert admin.put('/api/admin/text-model', json={**BODY, 'base_url': 'https://other.example/v1', 'api_key': ''}, headers=HEADERS).status_code == 400
     assert 'private-test-value' not in admin.get('/api/admin/text-model').text
     assert 'private-test-value' not in admin.get('/api/admin/audit').text
-    assert admin.delete('/api/admin/text-model', headers=HEADERS).status_code == 200
+    assert admin.post('/api/admin/text-model/reset', headers=HEADERS).status_code == 200
     assert not ms.CONFIG_PATH.exists() and ms.get_config().source == 'environment'
 
 
