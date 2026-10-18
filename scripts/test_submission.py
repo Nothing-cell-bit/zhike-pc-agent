@@ -9,6 +9,17 @@ from scripts import prepare_submission as release
 
 
 class SubmissionTests(unittest.TestCase):
+    def test_only_curated_sample_files_are_published(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            for name in ['samples/selected-works.json', 'samples/README.md',
+                         'samples/raw-response.json', 'samples/customer.db', 'samples/original.png']:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('sample', encoding='utf-8')
+            self.assertEqual(set(release.public_files(root)), {
+                'samples/selected-works.json', 'samples/README.md'})
+
     def test_private_files_are_never_selected(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

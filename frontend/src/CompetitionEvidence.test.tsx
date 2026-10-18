@@ -5,6 +5,13 @@ import {afterEach,expect,it} from 'vitest';
 import {CompetitionEvidence,ArticleBody,TaskQuestions} from './CompetitionEvidence';
 
 afterEach(cleanup);
+it('公开样例明确说明省略资料，不冒充ima或本地知识库核验',()=>{
+ render(<CompetitionEvidence work={{brief:{},content:{source_type:'sample',title:'历史文案'},report:{status:'needs_review',ima_verified:false}}}/>);
+ expect(screen.getByText(/公开历史样例/)).toBeTruthy();
+ expect(screen.getByText(/公开副本未附原图及资料快照/)).toBeTruthy();
+ expect(screen.queryByText(/知识来源：ima/)).toBeNull();
+ expect(screen.queryByText(/本地 ZIP/)).toBeNull();
+});
 it('显示四部分依据、未知阶段和本地图源，不冒充ima',()=>{
  render(<CompetitionEvidence work={{brief:{audience:'学生',scene:'课堂笔记',platform:'小红书'},content:{title:'选购清单',body:'核对任务',images:[],sources:[]},report:{status:'unchecked'}}}/>);
  for(const title of ['一、场景判断','二、知识库依据','三、图文软文','四、核验结果'])expect(screen.getByRole('heading',{name:title})).toBeTruthy();

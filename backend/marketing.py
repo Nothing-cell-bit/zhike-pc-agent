@@ -112,6 +112,8 @@ def unified_markdown(content, brief, report, draft=False):
     scenario = scenario_judgment(brief, content.get('scenario'))
     is_ima=content.get('source_type')=='ima'
     source_label=('ima共享知识库：'+content.get('knowledge_base_name','指定比赛知识库')+'；本稿使用该次检索保存的资料和原图。') if is_ima else '本地 ZIP；本稿不作为 ima 图源验收证明。'
+    if content.get('source_type')=='sample':
+        source_label='公开历史样例；保留真实文案，未附原图及资料快照，仅供阅读与草稿导出，不作为当前 ima 核验结果。'
     if content.get('fallback_reason'):source_label+=' 本次 ima 调用失败，已整体回退本地：'+content['fallback_reason']
     parts = ['# '+('待确认草稿' if draft else '营销图文与核验记录'),
              '> 知识来源：'+source_label,

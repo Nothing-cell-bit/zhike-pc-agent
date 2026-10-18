@@ -21,7 +21,7 @@ export function CompetitionEvidence({work}:{work:Data}){
   {claims.length?<ul>{claims.map((x:Data,i:number)=><li key={i}>{x.text}；依据：{x.source_id}</li>)}</ul>:<p>尚无当前版本的事实点，待核验。</p>}
   <h3>三、图文软文</h3><p>{c.title}</p><p>正文见图文预览。以下为配图依据：</p>
   {(c.images||[]).map((im:Data)=><div key={im.id}><b>{im.name}</b><p>{im.position||'位置待确认'} · {im.caption||im.description}</p><p>选图理由：{im.selection_reason||'历史稿件未记录'}</p><a href={safeUrl(im.source||im.url)} target="_blank" rel="noreferrer">{im.source||im.url||'图源待确认'}</a></div>)}
-  <h3>四、核验结果</h3><p>状态：{r.blocked?'资料冲突，停止导出':r.status==='manual_passed'?'人工已通过':r.status==='passed'?'资料检查通过':'待检查或需调整'}；{isIma?(r.ima_verified?'ima 来源快照完整性已验证':'ima 来源已保存，等待本版本核验'):'本地图源，不作为 ima 图源证明'}。</p>
+  <h3>四、核验结果</h3><p>状态：{r.blocked?'资料冲突，停止导出':r.status==='manual_passed'?'人工已通过':r.status==='passed'?'资料检查通过':'待检查或需调整'}；{c.source_type==='sample'?'公开副本未附原图及资料快照，不作为当前图源核验':isIma?(r.ima_verified?'ima 来源快照完整性已验证':'ima 来源已保存，等待本版本核验'):'本地图源，不作为 ima 图源证明'}。</p>
   <p>产品事实：{claims.length} 项；图片型号与合规：{r.status==='manual_passed'?'已人工确认，原始检查记录保留如下':r.status==='passed'?'本次检查通过，仍需发布前复核':'待核验或修订'}。</p>
   {r.approval&&<p>人工确认：{r.approval.display_name}；{r.approval.approved_at}；确认说明：{r.approval.note}</p>}
   <ul>{(r.issues||[]).map((x:Data,i:number)=><li key={i}>{x.type}：{x.text}</li>)}</ul>
@@ -31,6 +31,7 @@ export function CompetitionEvidence({work}:{work:Data}){
 }
 
 export function SourceNotice({content}:{content:Data}){
+ if(content.source_type==='sample')return <p className="muted">公开历史样例：保留真实最终文案，已省略原图与资料快照；仅供阅读和草稿导出，不作为当前 ima 核验结果。</p>;
  return <p className="muted">{content.source_type==='ima'?'知识来源：ima · '+(content.knowledge_base_name||'指定比赛知识库'):'知识来源：本地 ZIP'}{content.fallback_reason?'；ima 调用失败，已回退本地：'+content.fallback_reason:''}</p>;
 }
 

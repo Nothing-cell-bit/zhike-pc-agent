@@ -22,6 +22,7 @@ PATTERNS = (
     'frontend/package.json', 'frontend/package-lock.json', 'frontend/index.html',
     'frontend/tsconfig.json', 'frontend/vite.config.ts', 'docs/competition/*.md',
     'docs/competition/submission.json',
+    'samples/selected-works.json', 'samples/README.md',
 )
 LABELS = {'github_url': 'GitHub', 'modelscope_url': '魔搭',
           'description_url': '作品说明书', 'submission_url': '组委会提交入口'}
