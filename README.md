@@ -8,7 +8,6 @@
 
 - [作品说明书](docs/competition/WORK_DESCRIPTION.md) · [真实旧版结果节选](docs/competition/RESULT_EXCERPT.md) · [系统提示词](backend/prompts/marketing-system.txt)
 - [提交指南与材料对照](docs/competition/SUBMISSION_GUIDE.md) · [提交文案](docs/competition/SUBMISSION_COPY.md)
-- 双击根目录 `一键准备提交.cmd`：检查、生成源码包并打开本地提交准备台，支持一键复制字段。尚未填写官方入口或完成真实验收时会显示待补齐。
 
 产品范围以 [spec.md](spec.md) 为准，完成证据与剩余限制见 [ACCEPTANCE.md](ACCEPTANCE.md)。
 

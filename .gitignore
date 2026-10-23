@@ -22,3 +22,6 @@ output/
 *.db
 *.db-wal
 *.db-shm
+
+# Local-only submission shortcut.
+/一键准备提交.cmd

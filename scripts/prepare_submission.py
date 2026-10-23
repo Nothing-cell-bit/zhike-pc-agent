@@ -13,7 +13,7 @@ from urllib.parse import urlsplit, quote
 ROOT = Path(__file__).resolve().parents[1]
 TOP_FILES = {
     'README.md', 'ACCEPTANCE.md', 'spec.md', '.gitignore', '.gitattributes',
-    '.env.example', 'requirements.txt', 'requirements-dev.txt', '一键准备提交.cmd',
+    '.env.example', 'requirements.txt', 'requirements-dev.txt',
     'Dockerfile', '.dockerignore',
 }
 PATTERNS = (

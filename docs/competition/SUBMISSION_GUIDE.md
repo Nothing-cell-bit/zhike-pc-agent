@@ -4,7 +4,7 @@
 
 ## 直接使用
 
-1. 双击仓库根目录的 `一键准备提交.cmd`。工具不联网、不调用模型、不上传材料；生成并打开 `output/submission/index.html`。
+1. 运行 `python scripts/prepare_submission.py` 整理本地材料，再打开 `output/submission/index.html`。工具不联网、不调用模型、不上传材料。
 2. 面板提供源码 ZIP、提交字段 TXT、文件哈希清单，以及“一键复制全部字段”。全部文案使用团队名「比比拉布」。
 3. 补充或更新 `docs/competition/submission.json` 中的官方提交入口、视频链接和真实复核状态，再运行一次。链接为空会显示待补齐；不能把布尔值改成 true 来代替实际验收。
 4. 完成下表后，把字段粘贴到组委会正式表单，并由团队最终提交。当前没有官方表单地址，无法预先实现真实的“一键投递”。
