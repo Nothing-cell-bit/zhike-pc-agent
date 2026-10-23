@@ -27,7 +27,7 @@ TEXT_MODEL=qwen3.8-27b
 
 ### 在线自行配置（管理员）
 
-打开[线上工作台](https://nothingk-zhike-pc-agent.ms.show/staff)，管理员登录后，在左下角账号菜单进入「管理设置 → 服务连接 → 语言模型」。
+打开[线上工作台](https://nothingk-zhike-pc-agent.ms.show/staff)，从员工入口以管理员身份登录，进入「网站设置 → AI配置 → 语言模型」。
 
 1. 填写 API 基础地址（如服务商的 HTTPS 地址加 `/v1`）、准确模型名称和 API Key，不填完整 `/chat/completions` 路径。
 若使用当前 Qwen 接口，可开启「关闭 Qwen 思考模式」；其他服务仅在支持 `chat_template_kwargs.enable_thinking` 参数时启用。
