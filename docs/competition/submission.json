@@ -5,9 +5,9 @@
   "modelscope_url": "https://modelscope.cn/studios/NothingK/zhike-pc-agent",
   "description_url": "https://github.com/Nothing-cell-bit/zhike-pc-agent/blob/main/docs/competition/WORK_DESCRIPTION.md",
   "submission_url": "",
-  "video_url": "",
+  "video_url": "https://github.com/Nothing-cell-bit/zhike-pc-agent/blob/main/output/competition-video-tight-20261023/知客-三端演示-连贯配音与营销联动版.mp4",
   "ima_evidence_reviewed": true,
   "results_reviewed": true,
   "public_access_reviewed": true,
-  "summary": "知客是面向华为 PC 门店的营销图文智能体，将客户需求、产品型号、场景和平台转成有来源、可修改、可核验的内容。自研 Agent 负责场景策略、同型号选图、事实核验、合规拦截与版本导出；大模型负责理解和表达。支持公众号、小红书、朋友圈和门店海报，配套客户接待与跟进。当前为可本地运行的原型，已实现 ima 优先与本地回退。新版三组真实结果经人工修订和重验后通过，其中两组使用 ima，一组回退本地；完整赛题对照和连续录屏待补齐。"
+  "summary": "知客面向华为 PC 门店，连接客户咨询、客服接待、人工核实、规则报价与营销创作。客户聊天中的型号、场景、预算等可带入创作，支持公众号深度文章、小红书场景笔记和朋友圈自然短文，并保留来源、核验、版本与导出。已实现 ima 优先与本地回退；历史三组结果经修订与重验后通过，其中两组使用 ima、一组回退本地。新增约2分24秒的三端功能介绍视频，采用中文女声和演示测试报价，为剪辑版；完整赛题矩阵与未经剪辑的连续验收仍需补齐。"
 }

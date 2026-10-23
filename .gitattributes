@@ -7,3 +7,12 @@
 *.css text eol=lf
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
+
+# Preserve exact bytes of published demo assets.
+*.pdf binary
+*.mp4 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.wav binary
+*.mp3 binary
