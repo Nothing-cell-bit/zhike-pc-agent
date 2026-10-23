@@ -12,6 +12,7 @@ from PIL import Image
 from . import opendesign_engine as design_engine
 from .ai import job_active,job_update,text_lock
 from .config import DATA,IMAGE_BASE
+from . import image_settings
 from .db import Asset,Job,Session,Work,now
 from .images import SIZES
 from .marketing import has_source_conflict
@@ -45,9 +46,10 @@ def complete(jid,payload,state,note=''):
         job.payload=json.dumps(payload,ensure_ascii=False);session.commit()
 
 
-async def run_workflow(jid,reference_encoder,poll_seconds,image_key,downloader):
+async def run_workflow(jid,reference_encoder,poll_seconds,image_key,downloader,service=None):
     with Session() as session:
         job=session.get(Job,jid);payload=json.loads(job.payload);actor=job.actor_id;existing_remote=job.remote_id
+    service=service or image_settings.get_config(base=IMAGE_BASE,model=payload['model'],key=image_key)
     state=payload.setdefault('opendesign',{'round':0,'attempts':[],'phase':'planning'})
     if existing_remote and not state.get('remote_id'):state['remote_id']=existing_remote
     folder=DATA/'poster_runs'/jid;folder.mkdir(parents=True,exist_ok=True)
@@ -57,8 +59,10 @@ async def run_workflow(jid,reference_encoder,poll_seconds,image_key,downloader):
         if not reference.exists():
             encoded=reference_encoder(payload)
             reference.write_bytes(base64.b64decode(encoded.split(',',1)[1]))
-        async with httpx.AsyncClient(timeout=httpx.Timeout(90,connect=15),trust_env=False) as client:
-            headers={'Authorization':'Bearer '+image_key,'Content-Type':'application/json'}
+        async with image_settings.client(service,timeout=httpx.Timeout(90,connect=15)) as client:
+            image_settings.bind_job(payload,service,remote=bool(state.get("remote_id")))
+            persist(jid,payload)
+            headers={'Authorization':'Bearer '+service.key,'Content-Type':'application/json'}
             while state['round']<2:
                 if not job_active(jid):return
                 if not state.get('design'):
@@ -83,7 +87,7 @@ async def run_workflow(jid,reference_encoder,poll_seconds,image_key,downloader):
                     width,height=SIZES[payload['ratio']]
                     state.update(submission='in_flight',phase='submitting')
                     persist(jid,payload,step='AI正在根据设计方案生成整张海报')
-                    response=await client.post(IMAGE_BASE+'/images/generations',headers={**headers,'X-ModelScope-Async-Mode':'true'},
+                    response=await client.post(service.base+'/images/generations',headers={**headers,'X-ModelScope-Async-Mode':'true'},
                         json={'model':payload['model'],'prompt':state['design']['prompt'],'image_url':[image],'size':f'{width}x{height}'})
                     if response.status_code!=200:
                         state['submission']='rejected'
@@ -101,7 +105,7 @@ async def run_workflow(jid,reference_encoder,poll_seconds,image_key,downloader):
                     deadline=time.monotonic()+poll_seconds
                     while time.monotonic()<deadline:
                         if not job_active(jid):return
-                        response=await client.get(IMAGE_BASE+'/tasks/'+state['remote_id'],headers={**headers,'X-ModelScope-Task-Type':'image_generation'})
+                        response=await client.get(service.base+'/tasks/'+state['remote_id'],headers={**headers,'X-ModelScope-Task-Type':'image_generation'})
                         response.raise_for_status();result=response.json();status=result.get('task_status')
                         if status=='SUCCEED':
                             urls=result.get('output_images',[])

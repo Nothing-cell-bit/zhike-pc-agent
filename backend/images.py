@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import httpx
 from PIL import Image
 from .config import DATA,IMAGE_BASE,IMAGE_KEY,IMAGE_MODEL
+from . import image_settings
 from .db import Session,Job,Asset,Work,now
 from .ai import job_update,job_active,model_json,text_lock,redact_brief
 from .knowledge import knowledge,work_images
@@ -17,6 +18,10 @@ from .poster_renderer import render_poster
 
 image_lock=asyncio.Lock()
 SIZES={'1:1':(1024,1024),'3:4':(960,1280),'16:9':(1280,720)}
+def image_config():
+    return image_settings.get_config(base=IMAGE_BASE,model=IMAGE_MODEL,key=IMAGE_KEY)
+
+
 
 def private_asset(path):
     path=Path(path).resolve()
@@ -53,12 +58,15 @@ async def run_image(jid):
             j=s.get(Job,jid)
             if not j or j.status in {'cancelled','completed'}:return
             payload=json.loads(j.payload);remote=j.remote_id;actor=j.actor_id
-        if not IMAGE_KEY:job_update(jid,status='failed',step='未配置',error='魔搭图片Token尚未配置');return
+        settings=image_config()
+        if not settings.key:job_update(jid,status='failed',step='未配置',error='魔搭图片Token尚未配置');return
         job_update(jid,status='running',step='准备生成场景背景')
         terminal_failure=False
         try:
-            headers={'Authorization':'Bearer '+IMAGE_KEY,'Content-Type':'application/json'}
-            async with httpx.AsyncClient(timeout=httpx.Timeout(35,connect=8),trust_env=False) as c:
+            image_settings.bind_job(payload,settings,remote=bool(remote))
+            job_update(jid,payload=json.dumps(payload,ensure_ascii=False))
+            headers={'Authorization':'Bearer '+settings.key,'Content-Type':'application/json'}
+            async with image_settings.client(settings,timeout=httpx.Timeout(35,connect=8)) as c:
                 if not remote:
                     async with text_lock:
                         if not job_active(jid):return
@@ -67,7 +75,7 @@ async def run_image(jid):
                     prompt=str(obj.get('prompt',''))[:900]+' Empty environment only. No computers, no devices, no text, no logo. Clear central negative space.'
                     payload['generated_prompt']=prompt;job_update(jid,payload=json.dumps(payload,ensure_ascii=False),step='正在提交魔搭背景任务')
                     width,height=SIZES.get(payload.get('ratio'),SIZES['3:4'])
-                    r=await c.post(IMAGE_BASE+'/images/generations',headers={**headers,'X-ModelScope-Async-Mode':'true'},json={'model':IMAGE_MODEL,'prompt':prompt,'size':f'{width}x{height}'})
+                    r=await c.post(settings.base+'/images/generations',headers={**headers,'X-ModelScope-Async-Mode':'true'},json={'model':settings.model,'prompt':prompt,'size':f'{width}x{height}'})
                     if r.status_code in {401,403}:
                         if 'email verification' in r.text.lower():raise ValueError('魔搭账号需要先完成邮箱验证，才能使用魔粒生图。请在魔搭账号设置完成验证后重新生成。')
                         raise ValueError('魔搭鉴权或模型权限不足，请检查Token归属和权限')
@@ -79,7 +87,7 @@ async def run_image(jid):
                 while time.monotonic()<deadline:
                     with Session() as s:
                         if s.get(Job,jid).status=='cancelled':return
-                    r=await c.get(IMAGE_BASE+'/tasks/'+remote,headers={**headers,'X-ModelScope-Task-Type':'image_generation'})
+                    r=await c.get(settings.base+'/tasks/'+remote,headers={**headers,'X-ModelScope-Task-Type':'image_generation'})
                     r.raise_for_status();out=r.json();status=out.get('task_status','')
                     if status=='SUCCEED':
                         urls=out.get('output_images',[])
@@ -88,9 +96,9 @@ async def run_image(jid):
                         with Image.open(io.BytesIO(blob)) as im:
                             dest=folder/(jid+'.png');im.convert('RGB').save(dest)
                         with Session() as s:
-                            asset=Asset(actor_id=actor,kind='generated_background',path=str(dest),metadata_json=json.dumps({'model':IMAGE_MODEL,'task_id':remote,'prompt':payload.get('generated_prompt'),'source':'ModelScope','ratio':payload.get('ratio'),'account_verified':False},ensure_ascii=False))
+                            asset=Asset(actor_id=actor,kind='generated_background',path=str(dest),metadata_json=json.dumps({'model':settings.model,'task_id':remote,'prompt':payload.get('generated_prompt'),'source':'ModelScope','ratio':payload.get('ratio'),'account_verified':False},ensure_ascii=False))
                             s.add(asset);s.commit();aid=asset.id
-                        job_update(jid,status='completed',step='背景已生成',result=json.dumps({'asset_id':aid,'remote_id':remote,'model':IMAGE_MODEL}));return
+                        job_update(jid,status='completed',step='背景已生成',result=json.dumps({'asset_id':aid,'remote_id':remote,'model':settings.model}));return
                     if status in {'FAILED','CANCELED','CANCELLED'}:
                         terminal_failure=True
                         raise ValueError('魔搭生成失败，请检查模型权限、额度或提示词')

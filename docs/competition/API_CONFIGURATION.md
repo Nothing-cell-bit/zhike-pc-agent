@@ -61,11 +61,18 @@ MARKETING_KNOWLEDGE_SOURCE=ima_first
 
 设置了凭证只表示“已配置”。必须新建真实营销任务，检查作品的实际来源、图片引用和核验记录，才能判断接口是否成功。`local_zip` 或回退结果不能计为 ima 成功。
 
-## 4. 魔搭生图可选配置
+## 4. 图片 API 自行配置
 
-若需要调用云端背景生图，在 `.env` 中填写 `MODELSCOPE_IMAGE_API_KEY`。可选变量为 `MODELSCOPE_IMAGE_BASE_URL` 和 `MODELSCOPE_IMAGE_MODEL`，代码默认使用魔搭官方推理地址和 `Qwen/Qwen-Image-2.1-Turbo`。`MODELSCOPE_ACCOUNT=NothingK` 仅是显示标记，不等于凭证权限通过。
+管理员登录后，在「网站设置 → AI配置 → 图片生成服务」填写图片 API 基础地址、模型名称和 API Key，点击「保存图片配置」。新建的背景图、AI 海报和朋友圈 AI 配图任务立即使用新配置，不需要重启或重新部署。
 
-魔搭现已运行原网站，实际运行凭证仅配置在平台私有密文变量 ZHIKE_PRIVATE_CONFIG。文本模型使用经用户授权的临时认证隧道，详见 [部署说明](DEPLOYMENT.md)。没有生图权限时，可以使用已有实图本地合成海报。Git 上传凭证与推理 API Token 的权限可能不同，不能把某一项成功当作另一项也可用。
+- 当前支持 **魔搭异步生图兼容协议**：`POST /images/generations` 返回 `task_id`，通过 `GET /tasks/{task_id}` 查询 `task_status` 和 `output_images`。需要参考图的功能还要求模型支持 `image_url`。不能把仅支持同步 OpenAI 生图或聊天的服务直接当作该协议使用。
+- 默认基础地址为 `https://api-inference.modelscope.cn/v1`，默认模型为 `Qwen/Qwen-Image-2.1-Turbo`。实际模型 ID、权限与额度以自己的服务账号为准。
+- 密钥不回显；同一基础地址留空保留，更换基础地址必须重填。只能填写公网 HTTPS 443 地址，不含完整 `/images/generations` 路径、用户密码或查询参数。
+- 「测试当前图片配置」只读查询模型目录，**不会提交生图任务**。目录可见不代表生图权限、额度或参考图能力通过；魔搭目录可能只列文本模型，图片模型未列出时提示未能确认，不能据此断言图片模型不可用。实际生成才可能消耗图片额度。
+- 自定义配置保存在私有持久目录 `STORE_DATA_DIR/private/image-model.json`，Linux 文件权限为 600，原子写入，不进入业务数据库、普通数据库备份、公开源码包或前端存储。「恢复默认图片配置」删除自定义配置，恢复部署变量。
+- 已开始的任务使用启动时取得的配置；任务仅保存配置指纹，不保存 API Key。切换服务、模型或密钥后，旧任务停止跨服务续查；恢复原配置后可继续，或明确新建任务，避免在其他服务重复提交或查询旧任务编号。
+
+部署环境仍可使用 `MODELSCOPE_IMAGE_BASE_URL`、`MODELSCOPE_IMAGE_MODEL`、`MODELSCOPE_IMAGE_API_KEY` 作为默认值；管理员自定义图片配置优先。语言模型与图片模型的密钥、配置文件和恢复默认操作互相独立。完整私有运行目录备份按含凭证资料保护。
 
 ## 5. 生效顺序与验证
 

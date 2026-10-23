@@ -12,6 +12,7 @@ from pydantic import BaseModel,Field
 from sqlalchemy import select
 from .ai import job_active,job_update,model_json,text_lock,redact_brief
 from .config import DATA,IMAGE_BASE,IMAGE_KEY,IMAGE_MODEL
+from . import image_settings
 from .db import Session,Work,WorkVersion,Job,Asset,now
 from .knowledge import knowledge,work_images
 from .marketing import has_source_conflict,select_images
@@ -32,6 +33,10 @@ class GalleryPlan(BaseModel):
     theme:str=Field(min_length=1,max_length=200)
     images:list[SceneTile]=Field(min_length=1,max_length=9)
 
+def image_config():
+    return image_settings.get_config(base=IMAGE_BASE,model=IMAGE_MODEL,key=IMAGE_KEY)
+
+
 
 def image_counts(count,mode,available):
     if count not in COUNTS or mode not in {'original','mixed','ai'}:raise ValueError('支持单图、三图、六图、九宫格及三种图片来源')
@@ -41,12 +46,13 @@ def image_counts(count,mode,available):
 
 
 def prepare_gallery(work,count,mode,scene):
+    settings=image_config()
     content=json.loads(work.content);brief=json.loads(work.brief);report=json.loads(work.report)
     if brief.get('platform')!='朋友圈':raise ValueError('此配图工具用于朋友圈作品')
     if has_source_conflict(report) or report.get('status') not in {'passed','manual_passed'}:raise ValueError('请先完成文案检查或人工确认，再准备配图')
     available=list({image['id']:image for image in work_images(content,brief)}.values())
     original_count,ai_count=image_counts(count,mode,len(available))
-    if ai_count and not IMAGE_KEY:raise ValueError('图片服务尚未配置')
+    if ai_count and not settings.key:raise ValueError('图片服务尚未配置')
     if not available:raise ValueError('缺少同型号产品参考图')
     reference=available[0];path=knowledge.image_path(reference['id'])
     if not path or not path.is_file():raise ValueError('产品参考原图不存在')
@@ -57,9 +63,11 @@ def prepare_gallery(work,count,mode,scene):
         image=by_position.get(slot)
         items.append({'slot':slot,'kind':'original','image_id':image['id'],'title':image.get('caption') or image.get('description') or image['name'],'source':image.get('source','')} if image else {'slot':slot,'kind':'ai','submission':'not_started'})
     public=redact_brief({'scene':scene,'body':content.get('body','')})
-    return {'work_id':work.id,'work_version':work.version,'product_id':brief['product_id'],'product_name':content.get('product_name') or (knowledge.product(brief['product_id']) or {}).get('name',''),
+    payload={'work_id':work.id,'work_version':work.version,'product_id':brief['product_id'],'product_name':content.get('product_name') or (knowledge.product(brief['product_id']) or {}).get('name',''),
             'count':count,'mode':mode,'scene':public['scene'],'publication':public['body'],'original_count':original_count,'ai_count':ai_count,
-            'image_id':reference['id'],'source_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'model':IMAGE_MODEL,'items':items}
+            'image_id':reference['id'],'source_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'model':settings.model,'items':items}
+    if ai_count:image_settings.bind_job(payload,settings)
+    return payload
 
 
 def ensure_current(payload):
@@ -158,12 +166,16 @@ async def run_moments_gallery(jid):
             job=session.get(Job,jid)
             if not job or job.status in {'completed','cancelled'}:return
             payload=json.loads(job.payload);actor=job.actor_id
+        settings=image_config()
         terminal=False
         try:
             can_resume(payload);ensure_current(payload)
             job_update(jid,status='running',step='正在准备朋友圈配图',error='')
             ai_items=[item for item in payload['items'] if item['kind']=='ai']
-            if ai_items and not IMAGE_KEY:raise ValueError('图片服务尚未配置')
+            if ai_items:
+                image_settings.bind_job(payload,settings,remote=any(item.get('remote_id') for item in ai_items))
+                persist(jid,payload)
+            if ai_items and not settings.key:raise ValueError('图片服务尚未配置')
             if ai_items and not payload.get('plan'):
                 async with text_lock:
                     if not job_active(jid):return
@@ -176,8 +188,8 @@ async def run_moments_gallery(jid):
                 payload['plan']=plan
                 for item,design in zip(ai_items,plan['images']):item.update(design)
                 persist(jid,payload)
-            headers={'Authorization':'Bearer '+IMAGE_KEY,'Content-Type':'application/json'}
-            async with httpx.AsyncClient(timeout=httpx.Timeout(90,connect=15),trust_env=False) as client:
+            headers={'Authorization':'Bearer '+settings.key,'Content-Type':'application/json'}
+            async with image_settings.client(settings,timeout=httpx.Timeout(90,connect=15)) as client:
                 for item in ai_items:
                     if not job_active(jid):return
                     ensure_current(payload)
@@ -187,7 +199,7 @@ async def run_moments_gallery(jid):
                         item['submission']='in_flight';persist(jid,payload,step=f'正在生成第{item["slot"]+1}/{payload["count"]}张配图')
                         request={'model':payload['model'],'prompt':tile_prompt(payload,item),'size':'1024x1024'}
                         if image:request['image_url']=[image]
-                        response=await client.post(IMAGE_BASE+'/images/generations',headers={**headers,'X-ModelScope-Async-Mode':'true'},json=request)
+                        response=await client.post(settings.base+'/images/generations',headers={**headers,'X-ModelScope-Async-Mode':'true'},json=request)
                         if response.status_code!=200:
                             item['submission']='rejected';persist(jid,payload)
                             raise ValueError(f'图片服务拒绝请求（HTTP {response.status_code}），已完成图片保留')
@@ -200,7 +212,7 @@ async def run_moments_gallery(jid):
                     deadline=time.monotonic()+POLL_SECONDS
                     while time.monotonic()<deadline:
                         if not job_active(jid):return
-                        response=await client.get(IMAGE_BASE+'/tasks/'+item['remote_id'],headers={**headers,'X-ModelScope-Task-Type':'image_generation'})
+                        response=await client.get(settings.base+'/tasks/'+item['remote_id'],headers={**headers,'X-ModelScope-Task-Type':'image_generation'})
                         response.raise_for_status();result=response.json();status=result.get('task_status')
                         if status=='SUCCEED':
                             if not result.get('output_images'):raise ValueError('远端未返回图片')

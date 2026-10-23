@@ -28,3 +28,21 @@ it('连接测试不创建生图任务，并说明目录检查的边界',async()=
  expect(api).toHaveBeenCalledWith('/admin/check-image-model','POST');
  expect(screen.getByText(/测试只查询模型列表，不创建生图任务/)).toBeTruthy();
 });
+it('接口未列出图片模型时提示未能确认，不显示生图成功',async()=>{
+ vi.mocked(api).mockResolvedValueOnce(initial).mockResolvedValueOnce({ok:null,message:'目录未列出图片模型，请在实际任务验证'});
+ render(<ImageModelSettings onSaved={vi.fn()}/>);
+ await screen.findByDisplayValue(initial.base_url);
+ fireEvent.click(screen.getByRole('button',{name:'测试当前图片配置'}));
+ await screen.findByText('目录未列出图片模型，请在实际任务验证');
+ expect(screen.queryByRole('alert')).toBeNull();
+});
+it('恢复默认图片配置使用云端支持的POST，不涉及文本配置',async()=>{
+ vi.mocked(api).mockResolvedValueOnce({...initial,source:'custom'}).mockResolvedValueOnce(initial);
+ render(<ImageModelSettings onSaved={vi.fn()}/>);
+ await screen.findByDisplayValue(initial.base_url);
+ fireEvent.click(screen.getByRole('button',{name:'恢复默认图片配置'}));
+ fireEvent.click(screen.getByRole('button',{name:'确认恢复默认图片配置'}));
+ await screen.findByText('已恢复部署默认图片配置。');
+ expect(api).toHaveBeenCalledWith('/admin/image-model/reset','POST');
+ expect(vi.mocked(api).mock.calls.every(call=>!call[0].includes('text-model'))).toBe(true);
+});

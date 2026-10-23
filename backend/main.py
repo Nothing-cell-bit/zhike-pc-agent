@@ -27,7 +27,7 @@ from pydantic import BaseModel,Field,field_validator
 from sqlalchemy import select,update,func
 from sqlalchemy.exc import IntegrityError
 from .config import ROOT,DATA,IMAGE_KEY,IMAGE_MODEL
-from . import model_settings
+from . import model_settings,image_settings
 from .db import *
 from .knowledge import knowledge,import_zip,work_images
 from .ima import connection_status
@@ -1210,7 +1210,7 @@ def status(u=Depends(admin)):
     with Session() as s:
         image_job=s.scalar(select(Job).where(Job.kind=='image').order_by(Job.created_at.desc()).limit(1))
         image_error=image_job.error if image_job else ''
-    return {'text':model_settings.get_config().public(),'image':{'configured':bool(IMAGE_KEY),'model':IMAGE_MODEL,'account':'NothingK','account_verified':False,'last_error':image_error},'knowledge':knowledge.status(),'marketing_knowledge':{'provider':MARKETING_SOURCE,**connection_status()},'backups':[p.name for p in sorted((DATA/'backups').glob('*.db'))]}
+    return {'text':model_settings.get_config().public(),'image':{**image_settings.get_config().public(),'last_error':image_error},'knowledge':knowledge.status(),'marketing_knowledge':{'provider':MARKETING_SOURCE,**connection_status()},'backups':[p.name for p in sorted((DATA/'backups').glob('*.db'))]}
 
 @app.get('/api/admin/text-model')
 def text_model(u=Depends(admin)):
@@ -1241,6 +1241,34 @@ def reset_text_model(u=Depends(admin)):
 @app.post('/api/admin/check-model')
 async def check_model(u=Depends(admin)):
     return await model_settings.check_config()
+
+@app.get('/api/admin/image-model')
+def image_model(u=Depends(admin)):
+    return JSONResponse(image_settings.get_config().public(),headers={'Cache-Control':'no-store'})
+
+@app.put('/api/admin/image-model')
+async def save_image_model(request:Request,u=Depends(admin)):
+    try:
+        if len(await request.body())>16000:raise ValueError('图片配置内容过长')
+        body=await request.json()
+        result=await asyncio.to_thread(image_settings.save_config,body)
+    except ValueError as error:
+        detail='图片配置格式无效' if isinstance(error,json.JSONDecodeError) else str(error)
+        raise HTTPException(400,detail) from None
+    except OSError:
+        raise HTTPException(500,'图片配置保存失败，请检查私有目录权限') from None
+    with Session() as session:audit(session,u.id,'update_image_model');session.commit()
+    return JSONResponse(result,headers={'Cache-Control':'no-store'})
+
+@app.post('/api/admin/image-model/reset')
+def reset_image_model(u=Depends(admin)):
+    result=image_settings.reset_config()
+    with Session() as session:audit(session,u.id,'reset_image_model');session.commit()
+    return JSONResponse(result,headers={'Cache-Control':'no-store'})
+
+@app.post('/api/admin/check-image-model')
+async def check_image_model(u=Depends(admin)):
+    return await image_settings.check_config()
 
 @app.post('/api/admin/backup')
 def do_backup(u=Depends(admin)):

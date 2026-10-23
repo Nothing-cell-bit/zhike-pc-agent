@@ -4,6 +4,8 @@ import socket
 
 import httpx
 import pytest
+from .test_ai_poster import poster_request,mock_provider as poster_provider
+from .test_moments_gallery import gallery_request,mock_provider as gallery_provider
 
 HEADERS={'X-Store-Request':'1'}
 BODY={'base_url':'https://images.example/v1','model':'custom-image-model','api_key':'private-image-test-value'}
@@ -90,3 +92,77 @@ def test_image_check_does_not_echo_provider_errors(clients,isolated,monkeypatch,
     response=admin.post('/api/admin/check-image-model',headers=HEADERS)
     assert response.status_code==200 and not response.json()['ok']
     assert BODY['api_key'] not in response.text
+
+
+def test_background_generation_uses_saved_image_service(clients,isolated,monkeypatch):
+    import io
+    from PIL import Image
+    from backend import images
+    from backend.db import Job,Session
+    from .test_ai_images import image_job
+    isolated.save_config(BODY);jid=image_job();calls=[]
+    output=io.BytesIO();Image.new('RGB',(16,16),'red').save(output,format='PNG')
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(200,json={'task_id':'new-image-task'} if request.method=='POST' else {'task_status':'SUCCEED','output_images':['https://media.example/image.png']})
+    original=httpx.AsyncClient
+    monkeypatch.setattr(httpx,'AsyncClient',lambda **kw:original(transport=httpx.MockTransport(respond)))
+    async def prompt(*args,**kw):return {'prompt':'empty library'},{}
+    async def download(url):return output.getvalue()
+    monkeypatch.setattr(images,'model_json',prompt);monkeypatch.setattr(images,'download_image',download)
+    asyncio.run(images.run_image(jid))
+    with Session() as session:
+        job=session.get(Job,jid);assert job.status=='completed'
+        assert BODY['api_key'] not in job.payload+job.result+job.error
+    assert json.loads(calls[0].content)['model']==BODY['model']
+    assert all(request.headers['authorization']=='Bearer '+BODY['api_key'] for request in calls)
+    assert all(request.url.host=='93.184.216.34' for request in calls)
+
+
+def test_opendesign_poster_uses_saved_image_service(poster_request,isolated,monkeypatch):
+    from backend import ai_poster
+    from backend.db import Job,Session
+    from .conftest import post
+    admin,wid,body=poster_request;isolated.save_config(BODY)
+    calls,_=poster_provider(monkeypatch)
+    response=post(admin,f'/works/{wid}/poster-tasks',body);assert response.status_code==200
+    jid=response.json()['job_id'];asyncio.run(ai_poster.run_poster(jid))
+    with Session() as session:
+        job=session.get(Job,jid);assert job.status=='completed',job.error
+        assert BODY['api_key'] not in job.payload+job.result
+    assert json.loads(calls[0].content)['model']==BODY['model']
+    assert calls[0].headers['authorization']=='Bearer '+BODY['api_key']
+    assert calls[0].url.host=='93.184.216.34'
+
+
+def test_gallery_uses_saved_image_service(gallery_request,isolated,monkeypatch):
+    from backend import moments_gallery as gallery
+    from backend.db import Job,Session
+    from .conftest import post
+    admin,wid,body=gallery_request;isolated.save_config(BODY)
+    calls=gallery_provider(monkeypatch)
+    response=post(admin,f'/works/{wid}/moments-gallery-tasks',{**body,'mode':'ai','count':1})
+    assert response.status_code==200
+    jid=response.json()['job_id'];asyncio.run(gallery.run_moments_gallery(jid))
+    with Session() as session:
+        job=session.get(Job,jid);assert job.status=='completed',job.error
+        assert BODY['api_key'] not in job.payload+job.result
+    assert json.loads(calls[0].content)['model']==BODY['model']
+    assert calls[0].headers['authorization']=='Bearer '+BODY['api_key']
+
+
+def test_remote_job_stops_before_contacting_another_service(poster_request,isolated,monkeypatch):
+    from backend import ai_poster
+    from backend.db import Job,Session
+    from .conftest import post
+    admin,wid,body=poster_request;isolated.save_config(BODY)
+    jid=post(admin,f'/works/{wid}/poster-tasks',body).json()['job_id']
+    with Session() as session:session.get(Job,jid).remote_id='already-submitted-task';session.commit()
+    isolated.save_config({**BODY,'base_url':'https://other.example/v1','api_key':'different-image-private-key'})
+    calls,_=poster_provider(monkeypatch)
+    asyncio.run(ai_poster.run_poster(jid))
+    with Session() as session:
+        job=session.get(Job,jid)
+        assert job.status=='waiting_remote' and job.remote_id=='already-submitted-task'
+        assert '配置已变更' in job.error
+    assert calls==[]

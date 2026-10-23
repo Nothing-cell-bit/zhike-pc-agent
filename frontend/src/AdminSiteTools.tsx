@@ -3,6 +3,7 @@ import {Alert,App,Button,Descriptions,Spin,Table,Tag} from 'antd';
 import {api,Data,statuses,time} from './api';
 import {useData} from './lifecycle';
 import {TextModelSettings} from './TextModelSettings';
+import {ImageModelSettings} from './ImageModelSettings';
 
 function SettingsJob({id,onCompleted}:{id:string;onCompleted:()=>void}){
  const job=useData('/jobs/'+id,2000),reported=useRef('');
@@ -13,7 +14,7 @@ function SettingsJob({id,onCompleted}:{id:string;onCompleted:()=>void}){
 export function SiteAiSettings(){
  const status=useData('/admin/status');
  return <div className="admin-settings-stack"><section className="admin-card"><h2>AI 配置</h2><TextModelSettings onSaved={()=>void status.refresh()}/></section>
-  <section className="admin-card"><h2>图片生成服务</h2>{status.error?<Alert type="error" message={status.error}/>:!status.data?<Spin/>:<><p>模型：{status.data.image.model}</p><Tag color={status.data.image.configured?'green':'default'}>{status.data.image.configured?'已配置':'未配置'}</Tag><p className="muted">图片服务使用部署配置，生成图片时才会调用。</p>{status.data.image.last_error&&<Alert type="warning" message={status.data.image.last_error}/>}</>}</section>
+  <section className="admin-card"><h2>图片生成服务</h2><ImageModelSettings onSaved={()=>void status.refresh()}/>{status.data?.image?.last_error&&<Alert type="warning" message={status.data.image.last_error}/>}</section>
  </div>;
 }
 

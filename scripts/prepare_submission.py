@@ -92,11 +92,12 @@ def scan(root, files, contents=None):
                     r'KEY|TOKEN|CLIENT_?ID|PASSWORD|API_BASE|UPSTREAM_URL', key, re.I
                 ):
                     secrets.append(value)
-    private_model = root / 'data/private/text-model.json'
-    if private_model.is_file():
-        private = json.loads(private_model.read_text(encoding='utf-8'))
-        secrets.extend(value for key, value in private.items()
-                       if key in ('api_key', 'base_url') and isinstance(value, str) and len(value) >= 8)
+    for model_file in ('text-model.json', 'image-model.json'):
+        private_model = root / 'data/private' / model_file
+        if private_model.is_file():
+            private = json.loads(private_model.read_text(encoding='utf-8'))
+            secrets.extend(value for key, value in private.items()
+                           if key in ('api_key', 'base_url') and isinstance(value, str) and len(value) >= 8)
     pattern = re.compile(r'(?:gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}'
                          r'|sk-[A-Za-z0-9_-]{24,}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----)')
     for name in files:
