@@ -42,7 +42,12 @@ export function referencePrices(productName:string,rows:Data[]) {
   return {matched,entries};
 }
 
-export function ReferencePrice({productName,prices}:{productName:string;prices:Data[]}) {
+export function referenceReply(productName:string,row:Data):string {
+  const amount=String(row['页面金额（元）']);
+  return `${productName}（${row['精确款式']}）的${row['价格类型']}快照为 ¥${amount}${/起价/.test(row['价格类型'])?' 起':''}，核验日期 ${snapshotTime(row['核验时间'])}。这是公开历史参考记录，适用条件尚待当日核验，实际门店价格、优惠资格与库存还需确认。`;
+}
+
+export function ReferencePrice({productName,prices,onAdopt}:{productName:string;prices:Data[];onAdopt?:(text:string)=>void}) {
   const {matched,entries}=referencePrices(productName,prices);
   const [selection,setSelection]=useState('');
   const [open,setOpen]=useState(false);
@@ -57,6 +62,7 @@ export function ReferencePrice({productName,prices}:{productName:string;prices:D
   return <><section className="consult-reference-price" aria-label="产品参考价">
     <div className="reference-price-line"><span>{label}</span>{selected ? <strong title={selected['精确款式']}>¥{money(selected.amount)}{/起价/.test(selected['价格类型']) && <small>起</small>}</strong> : <strong className="reference-price-unavailable">价格待咨询</strong>}</div>
     <div className="reference-price-meta">{time && <span title={'北京时间 '+time}>快照 <time dateTime={(selected || latest)['核验时间']}>{time.slice(0,10)}</time></span>}{matched.length>0 && <button type="button" onClick={()=>setOpen(true)}>价格详情</button>}</div>
+    {onAdopt&&selected&&<><p className="reference-price-variant">{selected['精确款式']}</p><button className="adopt-reference" type="button" onClick={()=>onAdopt(referenceReply(productName,selected))}>采用参考价回复</button></>}
   </section>
   <Modal open={open} title="价格详情" footer={null} onCancel={()=>setOpen(false)} width={560}>
     <div className="reference-price-detail">

@@ -1,3 +1,4 @@
+from .dialogue_fakes import protocol_model
 import asyncio
 import json
 import pytest

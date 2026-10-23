@@ -1,3 +1,5 @@
+from .dialogue_fakes import legacy_analysis
+from .dialogue_fakes import protocol_model
 import asyncio
 import io
 import json
@@ -96,16 +98,16 @@ def test_analysis_new_messages_and_manual_locks_win(clients,monkeypatch):
     async def model(*a,**kw):
         with Session() as s:
             c=s.get(Conversation,cid);c.locked=json.dumps({'budget':{'value':'人工六千','evidence':['evidence'],'manual':True}});s.commit()
-        return {'budget':{'value':'五千','evidence':['evidence']},'tasks':{'value':'猜测','evidence':['nonexistent']}},{}
-    monkeypatch.setattr(ai,'model_json',model)
-    result=asyncio.run(ai.analysis(cid))
-    assert result['analysis']['budget']['value']=='人工六千'
-    assert result['analysis']['tasks']['value']=='尚未了解'
+        return {'goal':'recommend','action':'inform','reply':'旧建议'},{}
+    monkeypatch.setattr(ai,'model_json',protocol_model(model))
+    result=asyncio.run(legacy_analysis(cid))
+    assert result['stale'] is True
+    assert staff.get('/api/conversations/'+cid).json()['analysis']['budget']['value']=='人工六千'
     async def stale(*a,**kw):
         with Session() as s:c=s.get(Conversation,cid);c.seq+=1;s.commit()
-        return {},{}
-    monkeypatch.setattr(ai,'model_json',stale)
-    assert asyncio.run(ai.analysis(cid))['stale']
+        return {'goal':'recommend','action':'inform','reply':'旧建议'},{}
+    monkeypatch.setattr(ai,'model_json',protocol_model(stale))
+    assert asyncio.run(legacy_analysis(cid))['stale']
 
 
 def test_edit_during_verification_never_verifies_new_revision(clients,monkeypatch):
@@ -130,7 +132,7 @@ def test_marketing_removes_contact_details_before_model(clients,monkeypatch):
     async def capture(*args,**kwargs):
         received.append(json.dumps(args[1],ensure_ascii=False))
         raise ValueError('stop after input check')
-    monkeypatch.setattr(ai,'model_json',capture)
+    monkeypatch.setattr(ai,'model_json',protocol_model(capture))
     brief={'product_id':knowledge.products()[0]['id'],'audience':'张同学，手机13800138000','scene':'联系 student@example.com','goal':'到店','platform':'朋友圈'}
     with pytest.raises(ValueError):asyncio.run(ai.generate(brief,jid))
     assert '13800138000' not in received[0] and 'student@example.com' not in received[0]

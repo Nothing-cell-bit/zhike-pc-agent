@@ -108,7 +108,7 @@ def article_with_images(content):
     return '\n\n'.join(p for p in parts if p)
 
 
-def unified_markdown(content, brief, report, draft=False):
+def unified_markdown(content, brief, report, draft=False, article=None):
     scenario = scenario_judgment(brief, content.get('scenario'))
     is_ima=content.get('source_type')=='ima'
     source_label=('ima共享知识库：'+content.get('knowledge_base_name','指定比赛知识库')+'；本稿使用该次检索保存的资料和原图。') if is_ima else '本地 ZIP；本稿不作为 ima 图源验收证明。'
@@ -130,7 +130,7 @@ def unified_markdown(content, brief, report, draft=False):
     claims = report.get('claims', content.get('claims', []))
     parts.extend(f'- 事实点：{claim["text"]}；依据：{claim["source_id"]}' for claim in claims)
     if not sources: parts.append('- 尚无资料依据，待确认。')
-    parts += ['## 三、图文软文', article_with_images(content), '### 配图方案']
+    parts += ['## 三、图文软文', article_with_images(content) if article is None else article, '### 配图方案']
     for im in content.get('images', []):
         parts.append(f'- {im["name"]}；位置：{im.get("position", "待确认")}；说明：{im.get("caption", im.get("description", "待确认"))}；来源：{im.get("source") or im.get("url") or "待确认"}；选图理由：{im.get("selection_reason", "历史稿件未记录")}')
     status = report.get('status', 'unchecked')

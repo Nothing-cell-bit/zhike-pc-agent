@@ -7,12 +7,13 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 import httpx
-from PIL import Image,ImageDraw,ImageFont,ImageOps
+from PIL import Image
 from .config import DATA,IMAGE_BASE,IMAGE_KEY,IMAGE_MODEL
 from .db import Session,Job,Asset,Work,now
 from .ai import job_update,job_active,model_json,text_lock,redact_brief
 from .knowledge import knowledge,work_images
 from .marketing import has_source_conflict
+from .poster_renderer import render_poster
 
 image_lock=asyncio.Lock()
 SIZES={'1:1':(1024,1024),'3:4':(960,1280),'16:9':(1280,720)}
@@ -99,28 +100,7 @@ async def run_image(jid):
             safe=str(e) if isinstance(e,ValueError) else f'图片服务异常（{type(e).__name__}）；远端编号如已生成会保留，可继续查询'
             job_update(jid,status='waiting_remote' if remote and not terminal_failure else 'failed',step='图片任务未完成',error=safe[:600])
 
-def font(size):
-    paths=[Path('C:/Windows/Fonts/msyh.ttc'),Path('/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc'),Path('/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc')]
-    for p in paths:
-        if p.exists():return ImageFont.truetype(str(p),size)
-    return ImageFont.load_default()
-
-def lines(draw,text,f,maxwidth,maxlines):
-    result=[];line=''
-    truncated=False
-    for index,char in enumerate(text):
-        if char=='\n' or draw.textlength(line+char,font=f)>maxwidth:
-            result.append(line);line='' if char=='\n' else char
-            if len(result)>=maxlines:
-                truncated=True;break
-        else:line+=char
-    if line and len(result)<maxlines:result.append(line)
-    if truncated and result:
-        while result[-1] and draw.textlength(result[-1]+'…',font=f)>maxwidth:result[-1]=result[-1][:-1]
-        result[-1]+='…'
-    return result
-
-def compose(work_id,actor,image_id,background_id='',ratio='3:4'):
+def compose(work_id,actor,image_id,background_id='',ratio='3:4',style='studio'):
     with Session() as s:
         work=s.get(Work,work_id)
         if not work:raise ValueError('作品不存在')
@@ -133,38 +113,14 @@ def compose(work_id,actor,image_id,background_id='',ratio='3:4'):
         if not image:raise ValueError('产品图与作品型号不一致')
         background=s.get(Asset,background_id) if background_id else None
         if background_id and (not background or background.kind!='generated_background'):raise ValueError('背景不存在')
-        w,h=SIZES[ratio];margin=int(w*.065)
-        canvas=Image.new('RGB',(w,h),'#f2efea')
-        if background:
-            with Image.open(private_asset(background.path)) as bg:canvas=ImageOps.fit(bg.convert('RGB'),(w,h))
-            overlay=Image.new('RGBA',(w,h),(255,255,255,80));canvas=Image.alpha_composite(canvas.convert('RGBA'),overlay).convert('RGB')
-        d=ImageDraw.Draw(canvas);d.rounded_rectangle((margin,margin,w-margin,h-margin),radius=24,fill='#fffdf9')
-        d.text((margin*1.5,margin*1.4),'知客  /  到店体验',font=font(max(14,int(w*.018))),fill='#a72930')
-        landscape=w>h
-        text_x=int(margin*1.5);text_width=int(w*.43) if landscape else w-margin*3
-        title_y=int(h*.24) if landscape else int(margin*2.15)
-        title_size=int(w*.032) if landscape else int(w*.043)
-        title_step=int(title_size*1.4);title_count=3 if landscape else 2
-        y=title_y;f=font(title_size)
-        for l in lines(d,content.get('title','产品体验'),f,text_width,title_count):d.text((text_x,y),l,font=f,fill='#232323');y+=title_step
-        top=int(h*.24) if landscape else int(h*.29)
-        box=(int(w*.32),int(h*.50)) if landscape else (int(w*.76),int(h*.40))
-        product_x=int(w*.58) if landscape else (w-box[0])//2
-        with Image.open(knowledge.image_path(image_id)) as src:
-            product_im=src.convert('RGBA');product_im.thumbnail(box)
-            px=product_x+(box[0]-product_im.width)//2;py=top+(box[1]-product_im.height)//2
-            canvas.paste(product_im,(px,py),product_im)
-        d=ImageDraw.Draw(canvas);summary_y=int(h*.54) if landscape else int(h*.75);y=summary_y
-        summary_size=int(w*.02) if landscape else int(w*.024);summary_step=int(summary_size*1.5)
-        f=font(summary_size)
-        # Posters use the short CTA; the complete article remains in text exports.
-        for l in lines(d,content.get('cta') or content.get('intro','欢迎到店体验'),f,text_width,3 if landscape else 2):d.text((text_x,y),l,font=f,fill='#444444');y+=summary_step
-        label='AI场景合成 · 产品图来自知识库' if background else '产品图来自本地知识库 · 以实际销售版本为准'
-        if json.loads(work.report).get('status') not in {'passed','manual_passed'}:label='待确认草稿 · '+label
-        source_y=int(h-margin*1.9)
-        d.text((text_x,source_y),label,font=font(max(12,int(w*.015))),fill='#79736b')
-        dest=DATA/'assets'/f'poster-{work.id}-{work.version}-{int(time.time()*1000)}.png';dest.parent.mkdir(exist_ok=True);canvas.save(dest)
-        layout={'title':[text_x,title_y,text_x+text_width,title_y+title_step*title_count],'product':[px,py,px+product_im.width,py+product_im.height],'summary':[text_x,summary_y,text_x+text_width,y],'source':[text_x,source_y,w-margin,source_y+max(12,int(w*.02))]}
-        metadata={'work_id':work.id,'work_version':work.version,'background_id':background_id,'product_image_id':image_id,'product_source':image['source'],'product_image_url':image['url'],'ratio':ratio,'label':label,'layout':layout,'verification':json.loads(work.report).get('status')}
+        source='ima 共享知识库' if content.get('source_type')=='ima' else '本地知识库'
+        label=('AI 场景背景 · ' if background else '')+'产品图来自'+source+' · 以实际销售版本为准'
+        dest=DATA/'assets'/f'poster-{work.id}-{work.version}-{int(time.time()*1000)}.png';dest.parent.mkdir(exist_ok=True)
+        design=render_poster(content,(product or {}).get('name') or content.get('product_name','产品体验'),
+                             knowledge.image_path(image_id),private_asset(background.path) if background else None,
+                             SIZES[ratio],style,label,dest)
+        # ima snapshots keep media URLs private; use the authenticated cached image route.
+        product_image_url=image.get('url') or '/api/knowledge/images/'+image_id
+        metadata={'work_id':work.id,'work_version':work.version,'background_id':background_id,'product_image_id':image_id,'product_source':image['source'],'product_image_url':product_image_url,'ratio':ratio,'label':label,**design,'verification':json.loads(work.report).get('status')}
         asset=Asset(actor_id=actor,kind='composite',path=str(dest),metadata_json=json.dumps(metadata,ensure_ascii=False));s.add(asset);s.commit()
         return {'id':asset.id,'metadata':metadata}

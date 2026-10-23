@@ -31,6 +31,20 @@ it('正文不能通过Markdown或HTML夹带外部图片',()=>{
  const {container}=render(<ArticleBody content={{body:'![假图](https://outside.test/fake.png)\n\n<img src="https://outside.test/fake.png">',images:[]}}/>);
  expect(container.querySelector('img')).toBeNull();
 });
+it('预览保留手工字体、斜体、分隔线和列表编号，仅显示已选产品图',()=>{
+ const body='重要内容';
+ const doc={type:'doc',content:[
+  {type:'paragraph',content:[{type:'text',text:'重要内容',marks:[{type:'italic'},{type:'textStyle',attrs:{fontFamily:'楷体',fontSize:'23px'}}]}]},
+  {type:'horizontalRule'},
+  {type:'orderedList',attrs:{start:3},content:[{type:'listItem',content:[{type:'paragraph',content:[{type:'text',text:'列表'}]}]}]},
+  {type:'productImage',attrs:{id:'allowed'}},{type:'productImage',attrs:{id:'outside'}},
+ ]};
+ const {container}=render(<ArticleBody content={{body,rich_text:{body:{source:body,doc}},images:[{id:'allowed',caption:'同型号配图'}]}}/>);
+ expect(container.querySelector('em')?.textContent).toBe('重要内容');
+ expect(container.querySelector('span')?.style.fontSize).toBe('23px');
+ expect(container.querySelector('hr')).toBeTruthy();expect(container.querySelector('ol')?.start).toBe(3);
+ expect(container.querySelectorAll('img').length).toBe(1);expect(container.querySelector('img')?.getAttribute('src')).toBe('/api/knowledge/images/allowed');
+});
 it('给出事实、配图选择理由和冲突原因',()=>{
  render(<CompetitionEvidence work={{brief:{},content:{strategy:'从学习切入',strategy_current:false,images:[{id:'a',name:'课堂.png',caption:'笔记场景',source:'https://consumer.huawei.com/',position:'正文第1块后',selection_reason:'匹配课堂'}],sources:[{id:'s',title:'产品参数',version:'v1'}]},report:{status:'needs_review',blocked:true,issues:[{type:'资料冲突',text:'重量口径矛盾'}],claims:[{text:'事实点',source_id:'s'}]}}}/>);
  expect(screen.getByText(/重量口径矛盾/)).toBeTruthy();expect(screen.getByText(/匹配课堂/)).toBeTruthy();expect(screen.getByText(/事实点/)).toBeTruthy();

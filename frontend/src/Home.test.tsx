@@ -7,6 +7,11 @@ import {Home,followupTime,pendingFollowups} from './Home';
 afterEach(cleanup);
 const followups=[{id:'later',status:'pending',due_at:'2026-10-19T02:00:00Z',customer_name:'王女士',purpose:'补充需求'},{id:'done',status:'completed',due_at:'2026-10-17T00:00:00Z'},{id:'first',status:'pending',due_at:'2026-10-18T07:00:00Z',customer_name:'林同学',purpose:'确认专业软件'}];
 const works=[{id:'work-one',updated_at:'2026-10-18T06:00:00Z',content:{title:'开学选购清单',images:[]},brief:{platform:'小红书'}}];
+it('朋友圈正文未内嵌图片时，最近作品显示相册封面',()=>{
+ const recent=[{...works[0],brief:{platform:'朋友圈'},cover_image:{url:'/api/assets/gallery-cover',caption:'朋友圈相册首图'}}];
+ const {container}=render(<Home summary={{waiting:0,works:1}} productsCount={10} followups={[]} works={recent} navigate={vi.fn()}/>);
+ expect(container.querySelector('.home-work-cover')?.getAttribute('src')).toBe('/api/assets/gallery-cover');
+});
 
 it('三个业务入口和新建内容均导航到实际功能',()=>{
  const navigate=vi.fn();render(<Home summary={{waiting:3,works:12}} productsCount={10} followups={followups} works={works} navigate={navigate}/>);

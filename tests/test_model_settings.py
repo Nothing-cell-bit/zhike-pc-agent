@@ -7,6 +7,35 @@ import pytest
 
 from backend import ai
 
+
+def test_interrupted_model_call_retries_with_delay_and_preserves_safe_stage(monkeypatch):
+    from backend.model_settings import ModelConfig
+    from backend.service_workflow import ServicePlanning
+    monkeypatch.setattr(ai,'get_config',lambda:ModelConfig('http://localhost/v1','qwen-test','private-key'))
+    calls=[];delays=[]
+    async def interrupted(settings,payload,timeout=100):
+        calls.append(timeout);raise httpx.RemoteProtocolError('private transport detail')
+    async def sleep(seconds):delays.append(seconds)
+    monkeypatch.setattr(ai,'completion',interrupted);monkeypatch.setattr(ai.asyncio,'sleep',sleep)
+    with pytest.raises(ValueError) as failure:
+        asyncio.run(ai.model_json('规划',{},schema=ServicePlanning,request_timeout=60))
+    assert len(calls)==2 and delays==[1]
+    assert '连接中断' in str(failure.value) and '接待规划' in str(failure.value)
+    assert 'private' not in str(failure.value)
+    assert failure.value.stage=='ServicePlanning' and len(failure.value.attempts)==2
+
+
+def test_conversation_returns_current_analysis_failure_to_staff(clients):
+    from backend.db import Session,Job
+    from .test_reply_choices import seed
+    from .conftest import post
+    cid,staff,_=seed(clients)
+    with Session() as session:
+        session.add(Job(kind='analysis',actor_id='test',target_id=cid,status='failed',error='接待规划：模型连接中断，自动重试后仍未恢复'))
+        session.commit()
+    result=staff.get('/api/conversations/'+cid).json()
+    assert result['analysis_error']=='接待规划：模型连接中断，自动重试后仍未恢复'
+
 HEADERS = {'X-Store-Request': '1'}
 BODY = {'base_url': 'https://provider.example/v1', 'model': 'custom-chat', 'api_key': 'private-test-value'}
 

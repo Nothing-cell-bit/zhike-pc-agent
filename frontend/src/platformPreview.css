@@ -1,0 +1,10 @@
+.platform-moments{max-width:480px;margin:24px auto;padding:28px;font-family:"Microsoft YaHei",system-ui;color:#253128;font-size:16px;line-height:1.9;font-synthesis:weight style}
+.platform-moments-author{font-size:14px;font-weight:600;color:#506b88;margin-bottom:18px}.platform-moments .prose{font-size:16px;line-height:1.9}.platform-moments .prose p{white-space:pre-wrap;margin:0 0 18px}.platform-moments figure{padding:0;margin:15px 0;background:none}.platform-moments figure img{max-width:100%;height:auto;max-height:300px;object-fit:contain}.platform-moments figcaption{display:none}
+.platform-rednote{max-width:520px!important;padding:28px!important}.platform-rednote h1{font-size:24px!important;line-height:1.55!important;letter-spacing:0!important}.platform-rednote .prose{font-size:15px;line-height:1.9}.platform-rednote .prose li{margin:12px 0}.platform-rednote .prose p{margin:0 0 20px;white-space:pre-line}.platform-hashtags{display:flex;gap:8px;flex-wrap:wrap;color:#52778b;font-size:13px;margin-top:24px}.platform-wechat .platform-hashtags{display:none}
+.platform-wechat{font-family:"Microsoft YaHei",system-ui;font-size:16px!important;line-height:1.9}
+.platform-wechat .prose p{margin:1.5em 8px;letter-spacing:.1em;color:#30362d}
+.platform-wechat .prose h2{display:table;padding:0 .2em;margin:3em auto 1.5em;color:#fff;background:#a33c3c;font-size:19.2px;font-weight:bold;text-align:center;line-height:1.8}
+.platform-wechat .prose h3{padding-left:8px;border-left:3px solid #a33c3c;margin:2em 8px .75em 0;color:#30362d;font-size:17.6px;font-weight:bold;line-height:1.5}
+.platform-wechat .prose strong{color:#a33c3c;font-weight:bold}.platform-wechat .prose blockquote{padding:1em;border-left:4px solid #a33c3c;border-radius:6px;background:#f6f6f1;margin:1em 0}
+.writer-platform-hint{font-size:11px;color:#8b947f;margin:-8px 0 18px}.writer-paper .writer-internal-title .tiptap{font-size:18px;font-weight:500;color:#8b947f}
+@media(max-width:600px){.platform-moments{padding:16px}.platform-rednote{padding:14px!important}}

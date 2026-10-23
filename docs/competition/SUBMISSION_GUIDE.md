@@ -15,8 +15,8 @@
 | --- | --- | --- |
 | 初赛 GitHub 源码、README、安装和依赖 | 根目录 README、requirements、frontend/package-lock.json | 仓库链接见 submission.json；新电脑仍需自己的模型凭证和合法取得的知识包 |
 | 魔搭项目、模型或应用展示页 | MODELSCOPE_COPY.md、submission.json | 展示页应与源码和说明书一致；展示页本身不是在线生成服务 |
-| 作品说明书及至少一组可辨认结果 | WORK_DESCRIPTION.md、RESULT_EXCERPT.md | 已说明旧版真实文本结果及人工修订；不是 store-v3 或 ima 验收 |
-| 系统提示词八模块 | backend/prompts/marketing-system.txt、PROMPT_DESIGN.md | 提示词是实际代码读取文件；当前 local_zip 必须如实标注 |
+| 作品说明书及至少一组可辨认结果 | WORK_DESCRIPTION.md、RESULT_EXCERPT.md | 2026-10-23 说明书已补三端、核实报价及录屏证据；历史营销案例按实际来源标注 |
+| 系统提示词八模块 | backend/prompts/marketing-system.txt、PROMPT_DESIGN.md | 提示词是实际代码读取文件；ima 与本地回退按实际来源标注 |
 | 账号识别与指定 ima 知识库 | IMA_INTEGRATION.md | 已有两组新版 ima 通过案例；第三组是本地回退，不冒充 ima |
 | 四部分输出及事实、图片、合规核验 | WORK_DESCRIPTION.md、EVALUATION.md | 本地流程已实现；模型质量仍需真实任务验证 |
 | 复赛至少三组、两类场景、两个平台 | EVALUATION.md 的 A–L 任务 | 用 ima 重新运行并保存输入、输出、图源与核验 |

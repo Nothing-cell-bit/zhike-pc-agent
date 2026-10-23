@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from uuid import uuid4
-from sqlalchemy import create_engine, event, Column, String, Text, Integer, Boolean
+from sqlalchemy import create_engine, event, Column, String, Text, Integer, Boolean,inspect
 from sqlalchemy.orm import declarative_base, sessionmaker
 from .config import DATA
 
@@ -57,6 +57,50 @@ class Message(Base):
     seq=Column(Integer,nullable=False)
     created_at=Column(String,default=now)
 
+class ConversationDismissal(Base):
+    __tablename__='conversation_dismissals'
+    user_id=Column(String,primary_key=True)
+    conversation_id=Column(String,primary_key=True)
+    created_at=Column(String,default=now)
+
+class DialogueState(Base):
+    __tablename__='dialogue_states'
+    conversation_id=Column(String,primary_key=True)
+    revision=Column(Integer,default=0,nullable=False)
+    message_seq=Column(Integer,default=0,nullable=False)
+    state=Column(Text,default='{}',nullable=False)
+    updated_at=Column(String,default=now)
+
+class DialogueRun(Base):
+    __tablename__='dialogue_runs'
+    id=Column(String,primary_key=True,default=uid)
+    conversation_id=Column(String,index=True,nullable=False)
+    input_revision=Column(Integer,nullable=False)
+    input_seq=Column(Integer,nullable=False)
+    status=Column(String,default='running')
+    trace=Column(Text,default='{}')
+    created_at=Column(String,default=now)
+
+class PriceRule(Base):
+    __tablename__='price_rules'
+    id=Column(String,primary_key=True,default=uid)
+    product_id=Column(String,index=True,nullable=False)
+    variant_id=Column(String,nullable=False)
+    payload=Column(Text,nullable=False)
+    author_id=Column(String,nullable=False)
+    approved_by=Column(String,default='')
+    status=Column(String,default='draft')
+    created_at=Column(String,default=now)
+
+class QuoteQualification(Base):
+    __tablename__='quote_qualifications'
+    id=Column(String,primary_key=True,default=uid)
+    customer_id=Column(String,index=True,nullable=False)
+    qualification=Column(String,nullable=False)
+    evidence_ref=Column(String,nullable=False)
+    reviewed_by=Column(String,nullable=False)
+    valid_until=Column(String,nullable=False)
+
 class ReadPosition(Base):
     __tablename__='read_positions'
     id=Column(String,primary_key=True)
@@ -107,6 +151,8 @@ class Followup(Base):
     script=Column(Text,default='')
     status=Column(String,default='pending')
     feedback=Column(Text,default='')
+    generated=Column(Boolean,default=False)
+    offset_days=Column(Integer,default=0)
     created_at=Column(String,default=now)
 
 class Asset(Base):
@@ -131,4 +177,10 @@ class Audit(Base):
     target=Column(String,default='')
     created_at=Column(String,default=now)
 
-def init_db(): Base.metadata.create_all(engine)
+def init_db():
+    Base.metadata.create_all(engine)
+    # Additive migration: preserve existing reminders and all manually edited text.
+    columns={c['name'] for c in inspect(engine).get_columns('followups')}
+    with engine.begin() as connection:
+        if 'generated' not in columns:connection.exec_driver_sql('ALTER TABLE followups ADD COLUMN generated BOOLEAN NOT NULL DEFAULT 0')
+        if 'offset_days' not in columns:connection.exec_driver_sql('ALTER TABLE followups ADD COLUMN offset_days INTEGER NOT NULL DEFAULT 0')

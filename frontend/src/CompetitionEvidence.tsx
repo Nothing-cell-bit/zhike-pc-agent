@@ -1,6 +1,8 @@
+import {workImageUrl} from './workImages';
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import {Data} from './api';
+import {RichTextContent,richDocument} from './richText';
 
 const labels:Record<string,string>={audience:'目标人群',scene:'使用场景',buying_stage:'购买阶段',user_problem:'用户问题',goal:'内容目标',platform:'发布平台'};
 const safeUrl=(url:string)=>/^https?:\/\//i.test(url||'')?url:undefined;
@@ -16,7 +18,9 @@ export function CompetitionEvidence({work}:{work:Data}){
   <h3>一、场景判断</h3>
   <dl>{Object.entries(labels).map(([key,label])=><React.Fragment key={key}><dt>{label}</dt><dd>{scenario[key]||'待确认'}</dd></React.Fragment>)}</dl>
   {c.strategy&&<><h4>内容策略{c.strategy_current===false?'（修改前的策略，仅供追溯）':''}</h4><p style={{whiteSpace:'pre-wrap'}}>{c.strategy}</p></>}
+  {c.editorial_plan&&<details><summary>AI 创作规划 · {c.content_format}</summary><p>{c.editorial_plan.thesis}</p><p>开场：{c.editorial_plan.hook}</p><ul>{c.editorial_plan.sections?.map((section:Data,index:number)=><li key={index}>{section.title}：{section.intent}</li>)}</ul><p>边界：{c.editorial_plan.risk_notes?.join('；')}</p></details>}
   <h3>二、知识库依据</h3><p>产品型号：{c.product_name||'待确认'}</p>
+  {!!brief.chat_materials?.length&&<details><summary>结合的聊天素材 · {brief.chat_materials.length}条</summary><p>以下为生成时使用的脱敏摘录，只作需求和场景素材，不作为产品参数依据。</p>{brief.chat_materials.map((item:Data)=><blockquote key={item.message_id}><small>{item.role==='customer'?'客户':'顾问'}</small><p style={{whiteSpace:'pre-wrap'}}>{item.content}</p></blockquote>)}</details>}
   {(c.sources||[]).map((s:Data)=><div key={s.id}><b>{s.title}</b><p>资料编号：{s.id} · 版本：{s.version||'待确认'}</p>{(s.urls||[]).filter(safeUrl).map((u:string)=><p key={u}><a href={u} target="_blank" rel="noreferrer">{u}</a></p>)}</div>)}
   {claims.length?<ul>{claims.map((x:Data,i:number)=><li key={i}>{x.text}；依据：{x.source_id}</li>)}</ul>:<p>尚无当前版本的事实点，待核验。</p>}
   <h3>三、图文软文</h3><p>{c.title}</p><p>正文见图文预览。以下为配图依据：</p>
@@ -36,6 +40,7 @@ export function SourceNotice({content}:{content:Data}){
 }
 
 export function ArticleBody({content}:{content:Data}){
+ const rich=richDocument(content,'body');if(rich)return <div className="prose"><RichTextContent doc={rich} images={content.images||[]}/></div>;
  const blocks=(content.body||'').trim().split(/\n\s*\n/).filter((s:string)=>s.trim());
  const images=content.images||[];
  return <>{Array.from({length:blocks.length+1},(_,slot)=><React.Fragment key={slot}>
@@ -44,7 +49,7 @@ export function ArticleBody({content}:{content:Data}){
    const legacy=/第(\d+)[段块]/.exec(im.position||'');
    const after=Number.isInteger(im.after_block)?im.after_block:legacy?Number(legacy[1]):i+1;
    return Math.max(0,Math.min(after,blocks.length))===slot;
-  }).map((im:Data)=><figure key={im.id}><img src={'/api/knowledge/images/'+im.id} alt={im.caption||im.description||im.name}/><figcaption>{im.caption||im.description}</figcaption></figure>)}
+  }).map((im:Data)=><figure key={im.id}><img src={workImageUrl(im.id)} alt={im.caption||im.description||im.name}/><figcaption>{im.caption||im.description}</figcaption></figure>)}
  </React.Fragment>)}</>;
 }
 

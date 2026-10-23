@@ -166,3 +166,42 @@ def test_ima_generation_records_source_and_keeps_model_evidence_ima(remote,clien
         w=s.get(Work,result['work_id']);saved=json.loads(w.content)
         assert saved['source_type']=='ima' and saved['source_snapshot']==sid
         assert all(i['id'].startswith('ima-') for i in saved['images'])
+
+
+@pytest.mark.parametrize('ratio',['1:1','3:4','16:9'])
+@pytest.mark.parametrize('with_background',[False,True])
+def test_ima_poster_saves_without_public_source_url(remote,clients,ratio,with_background):
+    from backend.config import DATA
+    from backend.db import Asset,Session,Work
+    from backend.images import SIZES
+    from backend.knowledge import knowledge
+    from .conftest import post
+
+    module,provider,product,_=remote;admin,*_=clients
+    local=next(p for p in knowledge.products() if '14（鸿蒙' in p['name']);product['id']=local['id']
+    p,refs,sid=asyncio.run(provider.fetch_product(product,{}));image=p['images'][0]
+    assert 'url' not in image
+    original=module.image_path(image['id']).read_bytes()
+    content={'title':'课堂学习','cta':'欢迎到店体验','source_type':'ima','source_snapshot':sid,'images':p['images'],'sources':refs}
+    actor=admin.get('/api/me').json()['user']['id'];background_id=''
+    with Session() as s:
+        work=Work(actor_id=actor,brief=json.dumps({'product_id':product['id']}),content=json.dumps(content),report=json.dumps({'status':'passed','ima_verified':True}))
+        s.add(work)
+        if with_background:
+            path=DATA/'assets'/'test-background.png';path.parent.mkdir(exist_ok=True)
+            Image.new('RGB',(200,300),'beige').save(path)
+            background=Asset(actor_id=actor,kind='generated_background',path=str(path));s.add(background);s.flush();background_id=background.id
+        s.commit();wid=work.id
+    response=post(admin,f'/works/{wid}/compose',{'image_id':image['id'],'background_id':background_id,'ratio':ratio})
+    assert response.status_code==200
+    result=response.json();metadata=result['metadata']
+    assert metadata['product_source']==image['source']
+    assert metadata['product_image_url']=='/api/knowledge/images/'+image['id']
+    assert metadata['background_id']==background_id
+    assert admin.get(metadata['product_image_url']).content==original
+    assert module.image_path(image['id']).read_bytes()==original
+    assert any(a['id']==result['id'] for a in admin.get('/api/assets').json())
+    poster=admin.get('/api/assets/'+result['id'])
+    assert poster.status_code==200
+    with Image.open(io.BytesIO(poster.content)) as rendered:
+        assert rendered.size==SIZES[ratio]

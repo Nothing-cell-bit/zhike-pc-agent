@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-cjk 
 COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
+COPY third_party/ ./third_party/
 COPY --from=frontend /src/frontend/dist ./frontend/dist/
 ENV PYTHONUNBUFFERED=1 STORE_DATA_DIR=/mnt/workspace/zhike COOKIE_SECURE=true MARKETING_KNOWLEDGE_SOURCE=ima
 ENV CLOUD_PUBLIC_ORIGIN=https://nothingk-zhike-pc-agent.ms.show

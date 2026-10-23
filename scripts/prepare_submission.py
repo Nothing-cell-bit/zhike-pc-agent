@@ -17,7 +17,10 @@ TOP_FILES = {
     'Dockerfile', '.dockerignore',
 }
 PATTERNS = (
-    'backend/*.py', 'backend/prompts/*.txt', 'tests/*.py', 'scripts/*.py',
+    'backend/*.py', 'backend/prompts/*.txt', 'backend/poster_templates/*.html',
+    'third_party/poster-maker/*', 'tests/*.py', 'scripts/*.py',
+    'third_party/platform-content/*', 'third_party/doocs-md/*',
+    'backend/_vendor/**/*.py', 'backend/_vendor/**/*.md', 'third_party/open-design/*',
     'scripts/*.ps1', 'scripts/*.cjs', 'frontend/src/*.tsx', 'frontend/src/*.ts', 'frontend/src/*.css',
     'frontend/package.json', 'frontend/package-lock.json', 'frontend/index.html',
     'frontend/tsconfig.json', 'frontend/vite.config.ts', 'docs/competition/*.md',

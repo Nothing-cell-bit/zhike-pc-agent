@@ -2,7 +2,7 @@
 import React from 'react';
 import {cleanup,fireEvent,render,screen} from '@testing-library/react';
 import {afterEach,expect,it} from 'vitest';
-import {ReferencePrice,referencePrices,snapshotTime} from './ReferencePrice';
+import {ReferencePrice,referencePrices,snapshotTime,referenceReply} from './ReferencePrice';
 
 afterEach(cleanup);
 const name='HUAWEI MateBook 14（鸿蒙版）';
@@ -11,6 +11,12 @@ const row=(values:Record<string,string>={})=>({
   '价格类型':'官方商城页面价','核验时间':'2026-10-17T14:40:00-05:00',
   '官方URL':'https://item.vmall.com/product/comdetail/index.html?prdId=1',
   '条件摘要':'积分8倍抵现；赠品以结算页为准','库存状态':'当时可购买',...values,
+});
+
+it('参考价草稿只呈现记录，不决定固定追问或复制采集技术说明',()=>{
+ const text=referenceReply(name,row({'条件摘要':'金额位于隐藏模块；需核验活动资格'}));
+ expect(text).not.toContain('隐藏模块');expect(text).not.toMatch(/[？?]$/);
+ expect(text).toContain('适用条件尚待当日核验');
 });
 
 it('显示参考价、北京时间快照、对应配置及原始条件，不自行扣券',()=>{

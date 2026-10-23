@@ -1,0 +1,12 @@
+.employee-login-page{min-height:100dvh;background:#f6f6f3}
+.employee-login-header{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:26px 40px;background:#fff;border-bottom:1px solid #e9e9e3}
+.employee-login-main{display:flex;align-items:center;justify-content:center;min-height:calc(100dvh - 100px);padding:40px 24px 72px}
+.employee-login-card{width:440px;max-width:100%;padding:38px;background:#fff;border:1px solid #e7e8df;border-radius:14px;box-shadow:0 12px 40px #2b342a05}
+.employee-login-card h1{font-size:28px;line-height:1.5;margin:16px 0 10px;letter-spacing:0}
+.employee-login-icon{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:11px;background:#f9eeee;color:#b52f37;font-size:21px}
+.account-form-description{font-size:13px;color:#858b7e;line-height:1.9;margin:10px 0 24px}
+.account-login-form>.ant-alert{margin-bottom:18px}.account-login-form .ant-form-item-label>label{font-size:13px}.account-login-form .ant-btn{height:42px}
+.employee-account-help{font-size:12px;line-height:1.9;color:#8e9487;padding-top:22px;margin-top:24px;border-top:1px solid #eee}
+.customer-header .customer-employee-entry{font-size:12px;color:#8b9187;margin-left:12px;border-left:1px solid #e7e8e1;border-radius:0;padding-left:20px}
+@media(max-width:600px){.employee-login-header{padding:20px}.employee-login-header .brand{font-size:22px}.employee-login-header>.ant-btn{font-size:12px;padding:4px}.employee-login-main{padding:28px 18px;align-items:flex-start}.employee-login-card{padding:26px}.customer-header .customer-employee-entry{margin-left:0;padding-left:8px}.employee-login-card h1{font-size:25px}}
+@media(max-width:600px){.customer-shell .customer-header{height:auto;min-height:76px;flex-wrap:wrap;row-gap:12px;padding-top:14px;padding-bottom:14px}.customer-shell .customer-header>div{margin-left:auto;flex-wrap:wrap;justify-content:flex-end;max-width:100%}}

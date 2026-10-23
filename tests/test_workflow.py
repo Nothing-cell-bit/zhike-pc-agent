@@ -62,7 +62,7 @@ def test_csrf_and_staff_permission(clients):
 
 def test_followup_rejection_stops_plan(clients):
     admin,staff,c,other=clients;cid=guest(c);post(staff,f'/conversations/{cid}/claim')
-    assert post(staff,'/followups/plan',{'conversation_id':cid,'days':[1,3,7]}).status_code==200
+    assert post(staff,'/followups/plan',{'conversation_id':cid,'days':[1,3,5]}).status_code==200
     assert post(staff,'/followups/plan',{'conversation_id':cid,'days':[1]}).status_code==409
     assert len(staff.get('/api/followups').json())==3
     assert staff.patch('/api/conversations/'+cid,json={'stage':'暂不购买'},headers={'X-Store-Request':'1'}).status_code==200

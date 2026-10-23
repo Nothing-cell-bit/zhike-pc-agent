@@ -1,0 +1,11 @@
+{
+  "schema.py": "3fcaeca897827f1cbac896739b0c9e6fb05beb76f36bc95f8709d8a174b3694b",
+  "llm_backend.py": "4e72e41ef83ee872f5ea52efbd2c0100346da67943f481489d793149afe9f694",
+  "planner.py": "077818509263a9315331d634711f53245d975d94f7397a7ce9594e9c275c783a",
+  "config.py": "24f7888a4e6abc13fe2931cfa378fe13b3dbdd15e8bae09d4bc1ac7c1fde2952",
+  "tools/_contract.py": "548648cae18bad0de82a935f4316f31850fd7f3ff80d31d83a3e2bbc0af4f6a4",
+  "tools/propose_design_spec.py": "9bad1a483885ecb7d48bfa2eb1c9bf208566036e74f68db9ff22a746e5e30d14",
+  "agents/critic_agent.py": "6d352addc02558a1d6d8c304236511f2fe9aae72dbc345a3effaa0ca0820c190",
+  "util/io.py": "36400241bb1711fbaca63b5e7f6abf455a65f43e7dfe00029300cc5c1c019221",
+  "util/logging.py": "eda0f6241eaa4bc25a1517e2a1875105248a1f44f4a855d766c6da25225941a6"
+}

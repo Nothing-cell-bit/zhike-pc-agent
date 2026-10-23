@@ -28,3 +28,9 @@ it('客户尚未答复或正在更新时不提供重复追问按钮',()=>{
  rerender(<CustomerNeeds analysis={analysis} editable updating onEdit={vi.fn()} onAdopt={vi.fn()}/>);
  expect(screen.queryByRole('button',{name:'采用到输入框'})).toBeNull();
 });
+it('客服已修正的购机意向明确显示锁定且仍可再次修改',()=>{
+ const edit=vi.fn();render(<CustomerNeeds analysis={{...analysis,progress:{value:'想换电脑',manual:true}}} editable onEdit={edit} onAdopt={vi.fn()}/>);
+ expect(screen.getByText('已锁定')).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'修改购机意向'}));
+ expect(edit).toHaveBeenCalledWith('progress','想换电脑');
+});

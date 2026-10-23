@@ -1,4 +1,7 @@
 export type Data = Record<string, any>;
+export class ApiError extends Error {
+  constructor(message:string,public status:number){super(message);this.name='ApiError';}
+}
 export const requestId = () => crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(20))).map(x=>x.toString(16).padStart(2,'0')).join('');
 export async function api<T = any>(path: string, method = 'GET', body?: unknown): Promise<T> {
   const response = await fetch('/api' + path, {
@@ -8,7 +11,7 @@ export async function api<T = any>(path: string, method = 'GET', body?: unknown)
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(typeof error.detail === 'string' ? error.detail : '输入无效或操作失败，请检查后重试');
+    throw new ApiError(typeof error.detail === 'string' ? error.detail : '输入无效或操作失败，请检查后重试',response.status);
   }
   return response.json();
 }

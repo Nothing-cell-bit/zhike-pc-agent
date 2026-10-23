@@ -201,6 +201,33 @@ def test_poster_layout_keeps_text_and_product_separate(clients,ratio):
     assert not overlaps(layout['summary'],layout['source'])
 
 
+@pytest.mark.parametrize('ratio',['1:1','3:4','16:9'])
+@pytest.mark.parametrize('style',['studio','ember'])
+def test_poster_editorial_layout_preserves_copy_and_bounds(clients,ratio,style):
+    from backend.images import SIZES
+    admin,*_=clients;wid,iid=make_work(admin)
+    title='准大学生看过来！写代码选本，这几点别只看颜值'
+    with Session() as s:
+        work=s.get(Work,wid);content=json.loads(work.content)
+        content['title']=title
+        content['claims']=[{'text':'已核实的产品信息','source_id':content['sources'][0]['id']}]
+        work.content=json.dumps(content);s.commit()
+    response=post(admin,'/works/'+wid+'/compose',{'image_id':iid,'ratio':ratio,'style':style})
+    assert response.status_code==200
+    metadata=response.json()['metadata'];copy=metadata['poster_copy']
+    assert copy['eyebrow']+'！'+copy['headline']==title
+    assert copy['highlights']==['已核实的产品信息']
+    assert metadata['design_version']=='poster-maker-v1'
+    assert metadata['style']==style and metadata['design_license']=='MIT'
+    width,height=SIZES[ratio]
+    boxes=list(metadata['layout'].values())
+    for x1,y1,x2,y2 in boxes:
+        assert 0<=x1<x2<=width and 0<=y1<y2<=height
+    def overlaps(a,b):return a[0]<b[2] and b[0]<a[2] and a[1]<b[3] and b[1]<a[3]
+    for index,box in enumerate(boxes):
+        assert all(not overlaps(box,other) for other in boxes[index+1:])
+
+
 def test_restart_keeps_saved_work_and_remote_image_identity(clients):
     from backend.main import app,lifespan
     admin,*_=clients;wid,_=make_work(admin)
