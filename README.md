@@ -36,12 +36,6 @@
 - [系统提示词与调用设计](docs/competition/PROMPT_DESIGN.md)
 - [统一验收任务与录屏提纲](docs/competition/EVALUATION.md)
 
-可用以下命令把已有三组历史记录整理为本地案例册，无网络或模型调用；产物在被忽略的 `output/competition/`，不会改写历史记录。案例册使用旧 store-v2 记录重新排版，不能作为新 store-v3 或 ima 接入的真实验收。
-
-```powershell
-.\.venv\Scripts\python.exe scripts/prepare_competition_materials.py
-```
-
 此段记录的是此前开发轮次；当前仓库与展示页准备进度以 [提交配置](docs/competition/submission.json) 和提交指南为准。连续真实 Demo 和比赛正式投递未完成；ima 接入的最新进展见上方说明。
 
 ## 当前功能

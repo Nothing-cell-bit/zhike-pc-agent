@@ -27,6 +27,30 @@ PATTERNS = (
     'docs/competition/submission.json',
     'samples/selected-works.json', 'samples/README.md',
 )
+# Keep local authoring tools out even when their parent directory is selected.
+LOCAL_ONLY_FILES = {
+    '一键准备提交.cmd',
+    'scripts/build_fullscreen_voice_video.py',
+    'scripts/build_recording_video.py',
+    'scripts/build_tight_demo.py',
+    'scripts/build_work_manual.py',
+    'scripts/replace_demo_narration.py',
+    'scripts/shorten_demo_video.py',
+    'scripts/synthesize_demo_voice.ps1',
+    'scripts/voice_demo_plan.py',
+    'scripts/prepare-submission.ps1',
+    'scripts/prepare_competition_materials.py',
+    'scripts/run_opendesign_trial.py',
+    'scripts/trial_moments_gallery.py',
+    'scripts/trial_platform_content.py',
+    'output/pdf/build_submission_manual.py',
+    'docs/客服回复显示修复-2026-10-22.md',
+    'docs/局部核实不阻断主线-2026-10-21.md',
+    'docs/接待主线实施与验收-2026-10-21.md',
+    'docs/接待执行与演示报价验收-2026-10-21.md',
+    'docs/模型连接与候选门槛修复-2026-10-22.md',
+}
+
 LABELS = {'github_url': 'GitHub', 'modelscope_url': '魔搭',
           'description_url': '作品说明书', 'submission_url': '组委会提交入口'}
 
@@ -37,7 +61,7 @@ def public_files(root):
         paths.update(root.glob(pattern))
     selected = []
     for path in sorted(paths):
-        if not path.is_file():
+        if not path.is_file() or path.relative_to(root).as_posix() in LOCAL_ONLY_FILES:
             continue
         if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
             raise ValueError('发布文件不能是外部链接：' + path.name)

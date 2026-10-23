@@ -25,3 +25,45 @@ output/
 
 # Local-only submission shortcut.
 /一键准备提交.cmd
+
+# Local authoring, packaging shortcuts and one-off content trials.
+/scripts/build_fullscreen_voice_video.py
+/scripts/build_recording_video.py
+/scripts/build_tight_demo.py
+/scripts/build_work_manual.py
+/scripts/replace_demo_narration.py
+/scripts/shorten_demo_video.py
+/scripts/synthesize_demo_voice.ps1
+/scripts/voice_demo_plan.py
+/scripts/prepare-submission.ps1
+/scripts/prepare_competition_materials.py
+/scripts/run_opendesign_trial.py
+/scripts/trial_moments_gallery.py
+/scripts/trial_platform_content.py
+/output/pdf/build_submission_manual.py
+
+# Dated internal debugging notes; keep consolidated architecture docs public.
+/docs/客服回复显示修复-2026-10-22.md
+/docs/局部核实不阻断主线-2026-10-21.md
+/docs/接待主线实施与验收-2026-10-21.md
+/docs/接待执行与演示报价验收-2026-10-21.md
+/docs/模型连接与候选门槛修复-2026-10-22.md
+
+# Local editors, operating-system files and development caches.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+[Dd]esktop.ini
+*.swp
+*.swo
+*.bak
+*.tmp
+*.orig
+*.rej
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+.nox/
+coverage.xml

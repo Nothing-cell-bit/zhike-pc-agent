@@ -32,6 +32,28 @@ class SubmissionTests(unittest.TestCase):
             self.assertEqual(set(release.public_files(root)), {
                 'README.md', 'backend/main.py', 'frontend/src/main.tsx'})
 
+    def test_local_authoring_materials_stay_out_of_source_zip(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            kept = {'README.md', 'scripts/start.ps1', 'scripts/evaluate_dialogue.py',
+                    'tests/test_workflow.py'}
+            local = {'一键准备提交.cmd', 'scripts/build_tight_demo.py',
+                     'scripts/prepare-submission.ps1', 'scripts/trial_platform_content.py',
+                     'output/pdf/build_submission_manual.py'}
+            for name in kept | local:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('local fixture', encoding='utf-8')
+            release.build(root, root / 'output/package', {'team': 'demo', 'stage': '初赛'})
+            with zipfile.ZipFile(root / 'output/package/zhike-source.zip') as archive:
+                self.assertEqual(set(archive.namelist()), kept)
+            self.assertTrue(all((root / name).is_file() for name in local))
+
+    def test_gitignore_covers_local_publication_exclusions(self):
+        lines = (release.ROOT / '.gitignore').read_text(encoding='utf-8-sig').splitlines()
+        ignored = {line.strip().lstrip('/') for line in lines if line.strip() and not line.startswith('#')}
+        self.assertFalse(release.LOCAL_ONLY_FILES - ignored)
+
     def test_known_secret_is_blocked_without_echoing_it(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
